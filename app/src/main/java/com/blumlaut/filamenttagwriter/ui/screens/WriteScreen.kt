@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -102,6 +103,7 @@ fun WriteScreen(
             if (!nfcAvailable) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(text = "NFC hardware not available on this device.", modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onErrorContainer)
@@ -109,6 +111,7 @@ fun WriteScreen(
             } else if (!nfcEnabled) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                    shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(text = "Please enable NFC in device settings.", modifier = Modifier.padding(16.dp))
@@ -131,6 +134,7 @@ fun WriteScreen(
                 NfcReaderWriter.WriteResult.Success -> {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        shape = MaterialTheme.shapes.extraLarge,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -138,12 +142,17 @@ fun WriteScreen(
                             Text(text = "The filament data has been written to the tag.", color = MaterialTheme.colorScheme.onPrimaryContainer)
                         }
                     }
-                    OutlinedButton(onClick = { viewModel.clearNfcWriteResult() }, modifier = Modifier.fillMaxWidth()) { Text("Write Another") }
+                    OutlinedButton(
+                        onClick = { viewModel.clearNfcWriteResult() },
+                        shape = MaterialTheme.shapes.extraLarge,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Write Another") }
                 }
 
                 is NfcReaderWriter.WriteResult.Error -> {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        shape = MaterialTheme.shapes.extraLarge,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -164,6 +173,7 @@ fun WriteScreen(
     if (showSelector) {
         ModalBottomSheet(onDismissRequest = { showSelector = false }) {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                // M3 Expressive: extraLarge pill shape for search
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -171,10 +181,15 @@ fun WriteScreen(
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
-                            TextButton(onClick = { searchQuery = "" }) { Text("Clear") }
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Clear search")
+                            }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                     singleLine = true,
                 )
 

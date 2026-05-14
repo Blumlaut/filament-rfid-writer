@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -163,6 +162,7 @@ fun FilamentFormScreen(
             if (showAutofillBanner) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    shape = MaterialTheme.shapes.extraLarge,
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -190,9 +190,10 @@ fun FilamentFormScreen(
                 },
                 label = { Text("Name") },
                 placeholder = { Text("e.g. ELEGOO PLA-CF Red") },
+                shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth(),
                 isError = nameError,
-                supportingText = { 
+                supportingText = {
                     if (nameError) Text("Name is required")
                     else Text("Try \"TPU Black\" or \"PLA-CF Red\" for auto-fill")
                 },
@@ -266,6 +267,7 @@ fun FilamentFormScreen(
                 },
                 label = { Text("Weight (g)") },
                 placeholder = { Text("1000") },
+                shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -282,6 +284,7 @@ fun FilamentFormScreen(
                     },
                     label = { Text("Min Temp (°C)") },
                     placeholder = { Text("190") },
+                    shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                 )
@@ -295,6 +298,7 @@ fun FilamentFormScreen(
                     },
                     label = { Text("Max Temp (°C)") },
                     placeholder = { Text("230") },
+                    shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                 )
@@ -310,6 +314,7 @@ fun FilamentFormScreen(
                 },
                 label = { Text("Manufacturer Code") },
                 placeholder = { Text("0xEEEEEEEE") },
+                shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -329,6 +334,7 @@ private fun MaterialDropdown(
     Box {
         OutlinedButton(
             onClick = { onExpandedChange(true) },
+            shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -363,6 +369,7 @@ private fun DiameterDropdown(
     Box {
         OutlinedButton(
             onClick = { onExpandedChange(true) },
+            shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -404,6 +411,7 @@ private fun ColorPickerField(
         Box {
             OutlinedButton(
                 onClick = { onExpandedChange(true) },
+                shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(
@@ -414,12 +422,13 @@ private fun ColorPickerField(
                         Text(text = "Color", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(text = filament.color, style = MaterialTheme.typography.bodyLarge)
                     }
+                    // M3 Expressive: circular color swatch
                     Box(
                         modifier = Modifier
                             .size(32.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(CircleShape)
                             .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
-                            .border(1.dp, Color.Gray, RoundedCornerShape(4.dp)),
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
                     )
                 }
             }
@@ -446,15 +455,17 @@ private fun ColorPickerField(
                             }
                         },
                         label = { Text("Hex") },
+                        shape = MaterialTheme.shapes.extraLarge,
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
+                    // M3 Expressive: circular color preview
                     Box(
                         modifier = Modifier
                             .size(32.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(CircleShape)
                             .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
-                            .border(1.dp, Color.Gray, RoundedCornerShape(4.dp)),
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
                     )
                 }
 

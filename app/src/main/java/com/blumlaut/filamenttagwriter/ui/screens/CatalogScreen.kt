@@ -9,6 +9,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -80,6 +83,7 @@ fun CatalogScreen(
             }
         } else {
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                // M3 Expressive: extraLarge pill shape for search
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -87,10 +91,15 @@ fun CatalogScreen(
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
-                            TextButton(onClick = { searchQuery = "" }) { Text("Clear") }
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Clear search")
+                            }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
                     singleLine = true,
                 )
 
@@ -197,12 +206,28 @@ fun FilamentCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                // M3 Expressive: icon buttons with 40dp touch targets
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (isSelected) {
-                        Icon(Icons.Filled.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Icon(
+                            Icons.Filled.Check,
+                            contentDescription = "Selected",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
                     }
-                    TextButton(onClick = onEdit) { Text("Edit") }
-                    TextButton(onClick = onDelete) { Text("Del") }
+                    IconButton(onClick = onEdit) {
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = "Edit filament",
+                        )
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = "Delete filament",
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             }
 

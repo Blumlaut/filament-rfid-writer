@@ -3,7 +3,7 @@ package com.blumlaut.filamenttagwriter.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -45,6 +45,7 @@ fun ReadScreen(
             if (!nfcAvailable) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
@@ -56,6 +57,7 @@ fun ReadScreen(
             } else if (!nfcEnabled) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                    shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
@@ -85,18 +87,24 @@ fun ReadScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
+                        // M3 Expressive: extraLarge shape + emphasized title
                         FilledTonalButton(
                             onClick = {
                                 val saved = filament.copy(id = UUID.randomUUID().toString())
                                 viewModel.saveFilament(saved)
                                 viewModel.clearNfcReadResult()
                             },
+                            shape = MaterialTheme.shapes.extraLarge,
                             modifier = Modifier.weight(1f),
                         ) {
-                            Text("Save to Catalog")
+                            Text(
+                                "Save to Catalog",
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                         OutlinedButton(
                             onClick = { viewModel.clearNfcReadResult() },
+                            shape = MaterialTheme.shapes.extraLarge,
                             modifier = Modifier.weight(1f),
                         ) {
                             Text("Read Another")
@@ -107,6 +115,7 @@ fun ReadScreen(
                 is NfcReaderWriter.ReadResult.Error -> {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        shape = MaterialTheme.shapes.extraLarge,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -124,6 +133,7 @@ fun ReadScreen(
                     }
                     OutlinedButton(
                         onClick = { viewModel.clearNfcReadResult() },
+                        shape = MaterialTheme.shapes.extraLarge,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("Try Again")
@@ -138,7 +148,8 @@ fun ReadScreen(
 
 @Composable
 private fun FilamentInfoCard(filament: Filament) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+    // M3 Expressive: extraLarge shape, circular swatch, emphasized title
+    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -146,14 +157,14 @@ private fun FilamentInfoCard(filament: Filament) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Box(
-                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
+                    modifier = Modifier.size(48.dp).clip(CircleShape)
                         .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong())),
                 )
                 Column {
                     Text(
                         text = filament.name.ifBlank { "Unknown Filament" },
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                     )
                     Text(
                         text = filament.subtype,
