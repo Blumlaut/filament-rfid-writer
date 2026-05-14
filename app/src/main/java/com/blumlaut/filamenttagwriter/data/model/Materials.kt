@@ -159,4 +159,31 @@ object Materials {
      * Resolve material code to name.
      */
     fun resolveMaterial(code: Int): String = MATERIAL_CODES.getOrElse(code) { "Unknown" }
+
+    /**
+     * Default temperature ranges (min–max °C) per material family.
+     */
+    val DEFAULT_TEMPS: Map<String, Pair<Short, Short>> = mapOf(
+        "PLA"  to (190.toShort() to 220.toShort()),
+        "PETG" to (220.toShort() to 250.toShort()),
+        "ABS"  to (230.toShort() to 260.toShort()),
+        "TPU"  to (210.toShort() to 240.toShort()),
+        "PA"   to (250.toShort() to 280.toShort()),
+        "PC"   to (260.toShort() to 290.toShort()),
+        "PVA"  to (180.toShort() to 210.toShort()),
+        "ASA"  to (240.toShort() to 270.toShort()),
+        "BVOH" to (180.toShort() to 210.toShort()),
+        "CPE"  to (220.toShort() to 250.toShort()),
+        "EVA"  to (180.toShort() to 220.toShort()),
+        "HIPS" to (220.toShort() to 250.toShort()),
+        "PP"   to (200.toShort() to 240.toShort()),
+        "PPA"  to (270.toShort() to 300.toShort()),
+        "PPS"  to (270.toShort() to 300.toShort()),
+    )
+
+    /**
+     * Get default temperature range for a material. Falls back to 190–230.
+     */
+    fun getDefaultTemps(material: String): Pair<Short, Short> =
+        DEFAULT_TEMPS[material] ?: (190.toShort() to 230.toShort())
 }

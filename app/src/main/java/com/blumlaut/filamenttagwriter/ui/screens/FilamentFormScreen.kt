@@ -63,6 +63,7 @@ fun FilamentFormScreen(
     var materialExplicit by remember { mutableStateOf(editFilament != null) }
     var subtypeExplicit by remember { mutableStateOf(editFilament != null) }
     var colorExplicit by remember { mutableStateOf(editFilament != null) }
+    var tempExplicit by remember { mutableStateOf(editFilament != null) }
 
     // Update when editFilament changes
     LaunchedEffect(editFilament?.id) {
@@ -86,10 +87,13 @@ fun FilamentFormScreen(
 
         if (parsed.material != null && !materialExplicit) {
             val defaultSubtypeCode = Materials.SUBTYPE_CODES_REVERSE[parsed.material] ?: 0x0000
+            val (minTemp, maxTemp) = if (!tempExplicit) Materials.getDefaultTemps(parsed.material) else filament.run { minTemp to maxTemp }
             filament = filament.copy(
                 material = parsed.material,
                 subtypeCode = defaultSubtypeCode,
                 subtype = parsed.material,
+                minTemp = minTemp,
+                maxTemp = maxTemp,
             )
             changed = true
         }
@@ -204,10 +208,13 @@ fun FilamentFormScreen(
                     materialExplicit = true
                     // Reset subtype to default for new material family
                     val defaultSubtypeCode = Materials.SUBTYPE_CODES_REVERSE[newMaterial] ?: 0x0000
+                    val (minTemp, maxTemp) = if (!tempExplicit) Materials.getDefaultTemps(newMaterial) else filament.run { minTemp to maxTemp }
                     filament = filament.copy(
                         material = newMaterial,
                         subtypeCode = defaultSubtypeCode,
                         subtype = newMaterial,
+                        minTemp = minTemp,
+                        maxTemp = maxTemp,
                     )
                 },
                 expanded = showMaterialDropdown,
@@ -268,6 +275,7 @@ fun FilamentFormScreen(
                 OutlinedTextField(
                     value = filament.minTemp.toString(),
                     onValueChange = {
+                        tempExplicit = true
                         it.toIntOrNull()?.let { t ->
                             filament = filament.copy(minTemp = t.coerceIn(0, 300).toShort())
                         }
@@ -280,6 +288,7 @@ fun FilamentFormScreen(
                 OutlinedTextField(
                     value = filament.maxTemp.toString(),
                     onValueChange = {
+                        tempExplicit = true
                         it.toIntOrNull()?.let { t ->
                             filament = filament.copy(maxTemp = t.coerceIn(0, 300).toShort())
                         }
