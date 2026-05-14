@@ -332,16 +332,15 @@ private fun MaterialDropdown(
     onExpandedChange: (Boolean) -> Unit,
 ) {
     Box {
-        OutlinedButton(
-            onClick = { onExpandedChange(true) },
+        OutlinedTextField(
+            value = selectedValue,
+            onValueChange = {},
+            label = { Text(label) },
+            readOnly = true,
             shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(text = selectedValue, style = MaterialTheme.typography.bodyLarge)
-            }
-        }
+            modifier = Modifier.fillMaxWidth().clickable { onExpandedChange(true) },
+            singleLine = true,
+        )
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { onExpandedChange(false) },
@@ -367,16 +366,15 @@ private fun DiameterDropdown(
     onExpandedChange: (Boolean) -> Unit,
 ) {
     Box {
-        OutlinedButton(
-            onClick = { onExpandedChange(true) },
+        OutlinedTextField(
+            value = "${"%.2f".format(selectedDiameter)}mm",
+            onValueChange = {},
+            label = { Text("Diameter") },
+            readOnly = true,
             shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "Diameter", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(text = "${"%.2f".format(selectedDiameter)}mm", style = MaterialTheme.typography.bodyLarge)
-            }
-        }
+            modifier = Modifier.fillMaxWidth().clickable { onExpandedChange(true) },
+            singleLine = true,
+        )
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { onExpandedChange(false) },
@@ -407,32 +405,28 @@ private fun ColorPickerField(
         hexInput = filament.color
     }
 
-    Column {
+   
         Box {
-            OutlinedButton(
-                onClick = { onExpandedChange(true) },
+            OutlinedTextField(
+                value = filament.color,
+                onValueChange = {},
+                label = { Text("Color") },
+                readOnly = true,
                 shape = MaterialTheme.shapes.extraLarge,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "Color", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(text = filament.color, style = MaterialTheme.typography.bodyLarge)
-                        // M3 Expressive: circular color swatch, aligned with value
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
-                                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
-                        )
-                    }
-                }
-            }
+                modifier = Modifier.fillMaxWidth().clickable { onExpandedChange(true) },
+                trailingIcon = {
+                    // M3 Expressive: circular color swatch
+                    Box(
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                    )
+                },
+                singleLine = true,
+            )
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { onExpandedChange(false) },
@@ -516,5 +510,5 @@ private fun ColorPickerField(
                 }
             }
         }
-    }
+
 }
