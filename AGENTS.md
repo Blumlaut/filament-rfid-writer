@@ -102,15 +102,3 @@ docs: update PLAN.md with Phase 3 details
 Never commit without a descriptive message. Never squash multiple unrelated changes into one commit.
 
 ---
-
-## Current State (Phase 1 Complete)
-
-- ✅ Project scaffold, Gradle, version catalog
-- ✅ Data models + EPC-256 encoder/decoder
-- ✅ Room database (entity, DAO, DB)
-- ✅ NFC read/write skeleton
-- ✅ Compose navigation stubs (4 screens)
-- ⏳ Phase 2: Wire up Room, build FilamentFormScreen, make Catalog functional
-- ⏳ Phase 3: NFC foreground dispatch, real tag read flow
-- ⏳ Phase 4: NFC write flow with tag validation
-- ⏳ Phase 5: Polish, error handling, release config
