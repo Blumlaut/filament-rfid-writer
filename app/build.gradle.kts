@@ -13,8 +13,8 @@ android {
         applicationId = "com.blumlaut.filamenttagwriter"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = (project.properties["versionCode"] as? String)?.toIntOrNull() ?: 1
+        versionName = project.properties["versionName"] as? String ?: "1.0"
     }
 
     signingConfigs {
