@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +24,17 @@ import androidx.navigation.NavController
 import com.blumlaut.filamenttagwriter.FilamentViewModel
 import com.blumlaut.filamenttagwriter.data.model.Filament
 
+/** Check if a filament matches a search query (name, material, subtype, color). */
+fun Filament.matchesQuery(query: String): Boolean {
+    if (query.isBlank()) return true
+    val q = query.lowercase()
+    return name.lowercase().contains(q) ||
+        material.lowercase().contains(q) ||
+        subtype.lowercase().contains(q) ||
+        color.lowercase().contains(q) ||
+        (color.removePrefix("#")).lowercase().contains(q)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CatalogScreen(
@@ -30,8 +42,11 @@ fun CatalogScreen(
     viewModel: FilamentViewModel,
 ) {
     val filaments by viewModel.catalog.collectAsStateWithLifecycle()
+    var searchQuery by remember { mutableStateOf("") }
     var deleteCandidate by remember { mutableStateOf<Filament?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val filteredFilaments = filaments.filter { it.matchesQuery(searchQuery) }
 
     Scaffold(
         topBar = {
@@ -64,20 +79,50 @@ fun CatalogScreen(
                 )
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(filaments, key = { it.id }) { filament ->
-                    FilamentCard(
-                        filament = filament,
-                        onEdit = { navController.navigate("form/edit/${filament.id}") },
-                        onDelete = {
-                            deleteCandidate = filament
-                            showDeleteDialog = true
-                        },
-                    )
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by name, material, or color") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            TextButton(onClick = { searchQuery = "" }) { Text("Clear") }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+
+                if (filteredFilaments.isEmpty() && searchQuery.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            text = "No filaments match",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(filteredFilaments, key = { it.id }) { filament ->
+                            FilamentCard(
+                                filament = filament,
+                                onEdit = { navController.navigate("form/edit/${filament.id}") },
+                                onDelete = {
+                                    deleteCandidate = filament
+                                    showDeleteDialog = true
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }

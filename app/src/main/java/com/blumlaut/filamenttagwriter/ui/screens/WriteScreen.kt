@@ -3,6 +3,8 @@ package com.blumlaut.filamenttagwriter.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +29,9 @@ fun WriteScreen(
     val writeResult = viewModel.nfcWriteResult.value
     val isWriting = viewModel.isWritingTag.value
     var showSelector by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredFilaments = filaments.filter { it.matchesQuery(searchQuery) }
 
     Scaffold(
         topBar = {
@@ -149,27 +154,51 @@ fun WriteScreen(
     // Filament selector bottom sheet
     if (showSelector) {
         ModalBottomSheet(onDismissRequest = { showSelector = false }) {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                contentPadding = PaddingValues(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(filaments, key = { it.id }) { filament ->
-                    FilamentCard(
-                        filament = filament,
-                        onEdit = {
-                            showSelector = false
-                            navController.navigate("form/edit/${filament.id}")
-                        },
-                        onDelete = {
-                            viewModel.deleteFilament(filament)
-                        },
-                        onSelect = {
-                            viewModel.selectedFilamentForWrite.value = filament
-                            showSelector = false
-                        },
-                        isSelected = selectedFilament?.id == filament.id,
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by name, material, or color") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            TextButton(onClick = { searchQuery = "" }) { Text("Clear") }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    singleLine = true,
+                )
+
+                if (filteredFilaments.isEmpty() && searchQuery.isNotEmpty()) {
+                    Text(
+                        text = "No filaments match",
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(filteredFilaments, key = { it.id }) { filament ->
+                            FilamentCard(
+                                filament = filament,
+                                onEdit = {
+                                    showSelector = false
+                                    navController.navigate("form/edit/${filament.id}")
+                                },
+                                onDelete = {
+                                    viewModel.deleteFilament(filament)
+                                },
+                                onSelect = {
+                                    viewModel.selectedFilamentForWrite.value = filament
+                                    showSelector = false
+                                },
+                                isSelected = selectedFilament?.id == filament.id,
+                            )
+                        }
+                    }
                 }
             }
         }
