@@ -1,8 +1,5 @@
 package com.blumlaut.filamenttagwriter.data.model
 
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-
 /**
  * Encodes/decodes the ELEGOO NTAG213 filament tag format.
  *
@@ -38,130 +35,145 @@ object Epc256Encoder {
 
     // Filament data starts at byte offset 0x40 = page 16
     const val FILAMENT_DATA_START_PAGE = 16  // decimal page 16 = 0x10
-    const val FILAMENT_DATA_SIZE = 32        // 32 bytes of filament data
+    const val FILAMENT_DATA_SIZE = 36        // 36 bytes of filament data (pages 16-24)
     const val FILAMENT_DATA_START_OFFSET = 0x40
 
     /**
-     * Encode a Filament into a 32-byte array (filament data section only).
-     * This maps to tag byte offsets 0x40–0x5F.
+     * Encode a Filament into a 36-byte array (filament data section only).
+     * This maps to tag byte offsets 0x40–0x63 (pages 16-24).
      */
     fun encode(filament: Filament): ByteArray {
-        val buffer = ByteBuffer.allocate(FILAMENT_DATA_SIZE).order(ByteOrder.BIG_ENDIAN)
+        val data = ByteArray(FILAMENT_DATA_SIZE)
+
+        // Helper: write 16-bit big-endian
+        fun put16(i: Int, value: Int) {
+            data[i] = (value shr 8).toByte()
+            data[i + 1] = value.toByte()
+        }
+
+        // Helper: write 32-bit big-endian
+        fun put32(i: Int, value: Int) {
+            data[i] = (value shr 24).toByte()
+            data[i + 1] = (value shr 16).toByte()
+            data[i + 2] = (value shr 8).toByte()
+            data[i + 3] = value.toByte()
+        }
 
         // 0x40: Header (1 byte)
-        buffer.put(HEADER)
+        data[0] = HEADER
 
         // 0x41-0x44: Manufacturer Code (4 bytes, big-endian)
-        buffer.putInt(filament.manufacturerCode)
+        put32(1, filament.manufacturerCode)
 
-        // 0x45-0x47: Reserved (3 bytes, zeros)
-        buffer.put(0x00)
-        buffer.put(0x00)
-        buffer.put(0x00)
+        // 0x45-0x47: Reserved (3 bytes, zeros) — already zero
 
         // 0x48-0x4B: Material Type (4 bytes, ELEGOO custom code)
         val materialCode = Materials.MATERIAL_CODES_REVERSE[filament.material.uppercase()]
             ?: Materials.MATERIAL_CODES_REVERSE["PLA"] ?: 0
-        buffer.putInt(materialCode)
+        put32(8, materialCode)
 
         // 0x4C-0x4D: Subtype Code (2 bytes, big-endian)
-        buffer.putShort(filament.subtypeCode)
+        put16(12, filament.subtypeCode.toInt() and 0xFFFF)
 
-        // 0x4E-0x4F: Reserved (2 bytes)
-        buffer.put(0x00)
-        buffer.put(0x00)
+        // 0x4E-0x4F: Reserved (2 bytes) — already zero
 
         // 0x50-0x52: Color RGB888 (3 bytes)
-        buffer.put((filament.colorRgb shr 16).toByte())  // R
-        buffer.put((filament.colorRgb shr 8).toByte())   // G
-        buffer.put(filament.colorRgb.toByte())            // B
+        data[16] = (filament.colorRgb shr 16).toByte()  // R
+        data[17] = (filament.colorRgb shr 8).toByte()   // G
+        data[18] = filament.colorRgb.toByte()            // B
 
         // 0x53: Color Modifier (1 byte)
-        buffer.put(filament.colorModifier)
+        data[19] = filament.colorModifier
 
         // 0x54-0x55: Min Extruder Temp (2 bytes, big-endian)
-        buffer.putShort(filament.minTemp)
+        put16(20, filament.minTemp.toInt() and 0xFFFF)
 
         // 0x56-0x57: Max Extruder Temp (2 bytes, big-endian)
-        buffer.putShort(filament.maxTemp)
+        put16(22, filament.maxTemp.toInt() and 0xFFFF)
 
-        // 0x58-0x5B: Reserved / Bed Temps (4 bytes)
-        buffer.putInt(0)
+        // 0x58-0x5B: Reserved / Bed Temps (4 bytes) — already zero
 
         // 0x5C-0x5D: Diameter (2 bytes, hundredths of mm, big-endian)
-        buffer.putShort((filament.diameter * 100).toInt().toShort())
+        put16(28, (filament.diameter * 100).toInt())
 
         // 0x5E-0x5F: Weight (2 bytes, grams, big-endian)
-        buffer.putShort(filament.weight.toShort())
+        put16(30, filament.weight)
 
         // 0x60-0x61: Production Date (2 bytes)
-        buffer.putShort(filament.productionDateRaw)
+        put16(32, filament.productionDateRaw.toInt() and 0xFFFF)
 
-        // Remaining bytes zeroed by ByteBuffer allocation
-        return buffer.array()
+        return data
     }
 
     /**
      * Decode a 32-byte filament data section into a Filament.
      * Expects data starting at tag byte offset 0x40.
+     *
+     * Uses direct array access instead of ByteBuffer to avoid
+     * potential byte-sign-extension issues on Android runtime.
      */
     fun decode(data: ByteArray): Filament {
+
         if (data.size < FILAMENT_DATA_SIZE) {
             throw IllegalArgumentException("Data too short: ${data.size} bytes (need $FILAMENT_DATA_SIZE)")
         }
 
-        val buffer = ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN)
+        // Helper: read unsigned byte at index
+        fun u8(i: Int): Int = data[i].toInt() and 0xFF
+
+        // Helper: read 16-bit big-endian at index
+        fun u16(i: Int): Int = (u8(i) shl 8) or u8(i + 1)
+
+        // Helper: read 32-bit big-endian at index
+        fun u32(i: Int): Int = (u8(i) shl 24) or (u8(i + 1) shl 16) or (u8(i + 2) shl 8) or u8(i + 3)
 
         // 0x40: Header
-        val header = buffer.get()
-        if (header != HEADER) {
-            throw IllegalArgumentException("Invalid header: 0x${header.toInt() and 0xFF} (expected 0x${HEADER.toInt() and 0xFF})")
+        val header = u8(0)
+        if (header != (HEADER.toInt() and 0xFF)) {
+            throw IllegalArgumentException("Invalid header: 0x${header.toString(16).uppercase()}")
         }
 
         // 0x41-0x44: Manufacturer Code
-        val manufacturerCode = buffer.int
+        val manufacturerCode = u32(1)
 
-        // 0x45-0x47: Reserved
-        buffer.position(buffer.position() + 3)
+        // 0x45-0x47: Reserved (skip)
 
         // 0x48-0x4B: Material Type
-        val materialCode = buffer.int
+        val materialCode = u32(8)
         val material = Materials.resolveMaterial(materialCode)
 
         // 0x4C-0x4D: Subtype Code
-        val subtypeCode = buffer.short
+        val subtypeCode = u16(12).toShort()
         val subtype = Materials.resolveSubtype(subtypeCode)
 
-        // 0x4E-0x4F: Reserved
-        buffer.position(buffer.position() + 2)
+        // 0x4E-0x4F: Reserved (skip)
 
         // 0x50-0x52: Color RGB
-        val r = buffer.get().toInt() and 0xFF
-        val g = buffer.get().toInt() and 0xFF
-        val b = buffer.get().toInt() and 0xFF
+        val r = u8(16)
+        val g = u8(17)
+        val b = u8(18)
         val colorRgb = (r shl 16) or (g shl 8) or b
 
         // 0x53: Color Modifier
-        val colorModifier = buffer.get()
+        val colorModifier = data[19]
 
         // 0x54-0x55: Min Temp
-        val minTemp = buffer.short
+        val minTemp = u16(20).toShort()
 
         // 0x56-0x57: Max Temp
-        val maxTemp = buffer.short
+        val maxTemp = u16(22).toShort()
 
-        // 0x58-0x5B: Reserved / Bed Temps
-        buffer.position(buffer.position() + 4)
+        // 0x58-0x5B: Reserved / Bed Temps (skip)
 
         // 0x5C-0x5D: Diameter
-        val diameterRaw = buffer.short.toInt() and 0xFFFF
+        val diameterRaw = u16(28)
         val diameter = diameterRaw.toFloat() / 100f
 
         // 0x5E-0x5F: Weight
-        val weight = buffer.short.toInt() and 0xFFFF
+        val weight = u16(30)
 
-        // 0x60-0x61: Production Date
-        val productionDateRaw = buffer.short
+        // 0x60-0x61: Production Date (if present)
+        val productionDateRaw = if (data.size > 34) u16(32).toShort() else 0
 
         return Filament(
             manufacturerCode = manufacturerCode,

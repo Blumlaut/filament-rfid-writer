@@ -81,7 +81,8 @@ object NfcReaderWriter {
                     Log.d(TAG, "Decoded: ${filament.material} / ${filament.subtype} / ${filament.color} / ${filament.diameter}mm / ${filament.weight}g")
                     ReadResult.Success(filament)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Decode failed: ${e.message}")
+                    Log.w(TAG, "Decode failed: ${e.javaClass.simpleName}: ${e.message}")
+                    e.stackTrace.take(5).forEach { Log.w(TAG, "  at $it") }
                     val firstPage = pages.values.firstOrNull()
                     val headerByte = firstPage?.get(0)
                     if (headerByte != null && headerByte.toInt() and 0xFF == 0x00) {
@@ -166,21 +167,26 @@ object NfcReaderWriter {
     }
 
     /**
-     * Read the filament data pages (16-23, decimal).
-     * These correspond to byte offsets 0x40-0x5F in the full tag.
+     * Read the filament data pages (16-24, decimal).
+     * These correspond to byte offsets 0x40-0x63 in the full tag (36 bytes / 9 pages).
+     *
+     * Reads each page individually to avoid variable-length overlap issues
+     * with MifareUltralight.readPages() on NTAG213 tags.
      */
     private fun readFilamentPages(ml: MifareUltralight): Map<Int, ByteArray> {
         val pages = mutableMapOf<Int, ByteArray>()
 
-        // Filament data: pages 16-23 (decimal), step 4 for 4-byte page reads
-        for (page in 16..23 step 4) {
-            val block = ml.readPages(page)
-            if (block != null) {
+        // Read each page individually — readPages() may return >4 bytes on NTAG213,
+        // so always take exactly the first 4 bytes (one page = 4 bytes)
+        for (page in 16..24) {
+            val response = ml.readPages(page)
+            if (response != null && response.size >= 4) {
+                val block = response.copyOfRange(0, 4)
                 pages[page] = block
                 val hex = block.joinToString(" ") { String.format("%02X", it) }
                 Log.d(TAG, "Page $page (0x${String.format("%02X", page)}): [$hex]")
             } else {
-                Log.w(TAG, "Page $page (0x${String.format("%02X", page)}): null")
+                Log.w(TAG, "Page $page (0x${String.format("%02X", page)}): null or too short (${response?.size ?: 0} bytes)")
             }
         }
         return pages
