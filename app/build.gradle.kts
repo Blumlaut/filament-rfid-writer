@@ -31,12 +31,16 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Only sign if keystore and env vars are present (CI)
+            val ks = signingConfigs.findByName("release")
+            if (ks?.storeFile?.exists() == true && System.getenv("KEYSTORE_PASSWORD") != null) {
+                signingConfig = ks
+            }
         }
         debug {
             isMinifyEnabled = false
