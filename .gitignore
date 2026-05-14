@@ -17,3 +17,6 @@ Thumbs.db
 # Local config
 local.properties
 .kotlin/
+
+# Release keystore (never commit)
+app/keystore.jks

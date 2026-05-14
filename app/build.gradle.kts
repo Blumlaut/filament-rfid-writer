@@ -17,8 +17,21 @@ android {
         versionName = "1.0"
     }
 
+    signingConfigs {
+        create("release") {
+            val keystorePath = project.layout.projectDirectory.file("keystore.jks")
+            if (keystorePath.asFile.exists()) {
+                storeFile = keystorePath
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
