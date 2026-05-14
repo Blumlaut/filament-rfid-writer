@@ -1,6 +1,8 @@
 package com.blumlaut.filamenttagwriter.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -10,7 +12,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.blumlaut.filamenttagwriter.FilamentViewModel
-import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.nfc.NfcReaderWriter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,7 +26,7 @@ fun WriteScreen(
     val selectedFilament = viewModel.selectedFilamentForWrite.value
     val writeResult = viewModel.nfcWriteResult.value
     val isWriting = viewModel.isWritingTag.value
-    var showDropdown by remember { mutableStateOf(false) }
+    var showSelector by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -54,37 +55,36 @@ fun WriteScreen(
                     }
                 }
             } else {
-                Box {
-                    OutlinedButton(onClick = { showDropdown = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = selectedFilament?.name?.ifBlank { "Select Filament" } ?: "Select Filament")
-                    }
-                    DropdownMenu(expanded = showDropdown, onDismissRequest = { showDropdown = false }) {
-                        filaments.forEach { filament ->
-                            DropdownMenuItem(
-                                text = { Text("${filament.name.ifBlank { "Unnamed" }} (${filament.subtype})") },
-                                onClick = {
-                                    viewModel.selectedFilamentForWrite.value = filament
-                                    showDropdown = false
-                                },
-                            )
-                        }
-                    }
+                // Filament selector button
+                FilledTonalButton(
+                    onClick = { showSelector = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = selectedFilament?.name?.ifBlank { "Select Filament" } ?: "Select Filament",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                 }
 
+                // Selected filament preview
                 selectedFilament?.let { filament ->
-                    Card {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text(text = filament.name.ifBlank { "Unnamed" }, fontWeight = FontWeight.SemiBold)
+                            Text(text = filament.name.ifBlank { "Unnamed" }, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                             Text(
                                 text = "${filament.subtype} | ${"%.2f".format(filament.diameter)}mm | ${filament.weight}g | ${filament.color} | ${filament.minTemp}–${filament.maxTemp}°C",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                         }
                     }
                 }
             }
 
+            // NFC status / write prompt
             if (!nfcAvailable) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
@@ -112,6 +112,7 @@ fun WriteScreen(
                 }
             }
 
+            // Write results
             when (writeResult) {
                 NfcReaderWriter.WriteResult.Success -> {
                     Card(
@@ -141,6 +142,35 @@ fun WriteScreen(
                 }
 
                 null -> {}
+            }
+        }
+    }
+
+    // Filament selector bottom sheet
+    if (showSelector) {
+        ModalBottomSheet(onDismissRequest = { showSelector = false }) {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(filaments, key = { it.id }) { filament ->
+                    FilamentCard(
+                        filament = filament,
+                        onEdit = {
+                            showSelector = false
+                            navController.navigate("form/edit/${filament.id}")
+                        },
+                        onDelete = {
+                            viewModel.deleteFilament(filament)
+                        },
+                        onSelect = {
+                            viewModel.selectedFilamentForWrite.value = filament
+                            showSelector = false
+                        },
+                        isSelected = selectedFilament?.id == filament.id,
+                    )
+                }
             }
         }
     }

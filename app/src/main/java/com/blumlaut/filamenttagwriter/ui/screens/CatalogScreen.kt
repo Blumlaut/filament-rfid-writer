@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -72,7 +73,6 @@ fun CatalogScreen(
                     FilamentCard(
                         filament = filament,
                         onEdit = { navController.navigate("form/edit/${filament.id}") },
-                        onWrite = { navController.navigate("write/${filament.id}") },
                         onDelete = {
                             deleteCandidate = filament
                             showDeleteDialog = true
@@ -108,15 +108,21 @@ fun CatalogScreen(
 }
 
 @Composable
-private fun FilamentCard(
+fun FilamentCard(
     filament: Filament,
     onEdit: () -> Unit,
-    onWrite: () -> Unit,
     onDelete: () -> Unit,
+    onSelect: (() -> Unit)? = null,
+    isSelected: Boolean = false,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { },
+        modifier = Modifier.fillMaxWidth().clickable { onSelect?.invoke() },
         shape = RoundedCornerShape(12.dp),
+        colors = if (isSelected) {
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        } else {
+            CardDefaults.cardColors()
+        },
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -142,7 +148,9 @@ private fun FilamentCard(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = onWrite) { Text("NFC") }
+                    if (isSelected) {
+                        Icon(Icons.Filled.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
                     TextButton(onClick = onEdit) { Text("Edit") }
                     TextButton(onClick = onDelete) { Text("Del") }
                 }
