@@ -21,7 +21,7 @@ android {
         create("release") {
             val keystorePath = project.layout.projectDirectory.file("keystore.jks")
             if (keystorePath.asFile.exists()) {
-                storeFile = keystorePath
+                storeFile = keystorePath.asFile
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("KEY_ALIAS")
                 keyPassword = System.getenv("KEY_PASSWORD")
