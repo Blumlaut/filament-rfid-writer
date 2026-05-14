@@ -23,6 +23,7 @@ import com.blumlaut.filamenttagwriter.FilamentViewModel
 import com.blumlaut.filamenttagwriter.data.model.Epc256Encoder
 import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.Materials
+import com.blumlaut.filamenttagwriter.data.model.NameParser
 
 private val DIAMETERS = listOf(1.75f, 2.85f, 3.0f)
 
@@ -55,18 +56,65 @@ fun FilamentFormScreen(
     var showSubtypeDropdown by remember { mutableStateOf(false) }
     var showDiameterDropdown by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
+    var showAutofillBanner by remember { mutableStateOf(false) }
     var nameError by remember { mutableStateOf(false) }
+
+    // Track which fields were explicitly set by the user (not autofilled)
+    var materialExplicit by remember { mutableStateOf(editFilament != null) }
+    var subtypeExplicit by remember { mutableStateOf(editFilament != null) }
+    var colorExplicit by remember { mutableStateOf(editFilament != null) }
 
     // Update when editFilament changes
     LaunchedEffect(editFilament?.id) {
         if (editFilament != null) {
             filament = editFilament
+            materialExplicit = true
+            subtypeExplicit = true
+            colorExplicit = true
         }
     }
 
     // Subtype options based on selected material
     val subtypeOptions by remember(filament.material) {
         mutableStateOf(Materials.getSubtypesForMaterial(filament.material))
+    }
+
+    // Autofill from name
+    fun autofillFromName(name: String) {
+        val parsed = NameParser.parse(name)
+        var changed = false
+
+        if (parsed.material != null && !materialExplicit) {
+            val defaultSubtypeCode = Materials.SUBTYPE_CODES_REVERSE[parsed.material] ?: 0x0000
+            filament = filament.copy(
+                material = parsed.material,
+                subtypeCode = defaultSubtypeCode,
+                subtype = parsed.material,
+            )
+            changed = true
+        }
+
+        if (parsed.subtype != null && !subtypeExplicit && parsed.subtype != filament.material) {
+            val code = Materials.SUBTYPE_CODES_REVERSE[parsed.subtype]
+            if (code != null) {
+                filament = filament.copy(subtypeCode = code, subtype = parsed.subtype)
+                changed = true
+            }
+        }
+
+        if (parsed.color != null && !colorExplicit) {
+            NameParser.resolveColor(parsed.color)?.let { rgb ->
+                filament = filament.copy(
+                    color = String.format("#%06X", rgb),
+                    colorRgb = rgb,
+                )
+                changed = true
+            }
+        }
+
+        if (changed) {
+            showAutofillBanner = true
+        }
     }
 
     Scaffold(
@@ -107,15 +155,43 @@ fun FilamentFormScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            // Autofill banner
+            if (showAutofillBanner) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Auto-filled material & color from name",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        TextButton(onClick = { showAutofillBanner = false }) {
+                            Text("Dismiss")
+                        }
+                    }
+                }
+            }
+
             // Name
             OutlinedTextField(
                 value = filament.name,
-                onValueChange = { filament = filament.copy(name = it) },
+                onValueChange = { newName ->
+                    filament = filament.copy(name = newName)
+                    autofillFromName(newName)
+                },
                 label = { Text("Name") },
                 placeholder = { Text("e.g. ELEGOO PLA-CF Red") },
                 modifier = Modifier.fillMaxWidth(),
                 isError = nameError,
-                supportingText = { if (nameError) Text("Name is required") else null },
+                supportingText = { 
+                    if (nameError) Text("Name is required")
+                    else Text("Try \"TPU Black\" or \"PLA-CF Red\" for auto-fill")
+                },
                 singleLine = true,
             )
 
@@ -125,6 +201,7 @@ fun FilamentFormScreen(
                 selectedValue = filament.material,
                 options = Materials.getAllMaterials(),
                 onSelected = { newMaterial ->
+                    materialExplicit = true
                     // Reset subtype to default for new material family
                     val defaultSubtypeCode = Materials.SUBTYPE_CODES_REVERSE[newMaterial] ?: 0x0000
                     filament = filament.copy(
@@ -144,6 +221,7 @@ fun FilamentFormScreen(
                     selectedValue = filament.subtype,
                     options = subtypeOptions,
                     onSelected = { newSubtype ->
+                        subtypeExplicit = true
                         val code = Materials.SUBTYPE_CODES_REVERSE[newSubtype] ?: filament.subtypeCode
                         filament = filament.copy(subtypeCode = code, subtype = newSubtype)
                     },
@@ -155,7 +233,10 @@ fun FilamentFormScreen(
             // Color
             ColorPickerField(
                 filament = filament,
-                onFilamentChanged = { filament = it },
+                onFilamentChanged = {
+                    colorExplicit = true
+                    filament = it
+                },
                 expanded = showColorPicker,
                 onExpandedChange = { showColorPicker = it },
             )
