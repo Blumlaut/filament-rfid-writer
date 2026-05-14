@@ -16,3 +16,4 @@ Thumbs.db
 
 # Local config
 local.properties
+.kotlin/
