@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [FilamentEntity::class], version = 1, exportSchema = false)
+@Database(entities = [FilamentEntity::class], version = 2, exportSchema = false)
 abstract class FilamentDatabase : RoomDatabase() {
 
     abstract fun filamentDao(): FilamentDao
@@ -20,7 +20,10 @@ abstract class FilamentDatabase : RoomDatabase() {
                     context.applicationContext,
                     FilamentDatabase::class.java,
                     "filament_database"
-                ).build().also { INSTANCE = it }
+                )
+                    .fallbackToDestructiveMigration(true)
+                    .build()
+                    .also { INSTANCE = it }
             }
         }
     }

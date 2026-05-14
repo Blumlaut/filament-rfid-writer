@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Spool outline -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,20 C40,20 30,30 30,44 L30,64 C30,78 40,88 54,88 C68,88 78,78 78,64 L78,44 C78,30 68,20 54,20 Z M54,28 C64,28 70,34 70,44 L70,64 C70,74 64,80 54,80 C44,80 38,74 38,64 L38,44 C38,34 44,28 54,28 Z" />
+    <!-- Filament winding lines -->
+    <path
+        android:fillColor="#D0BCFF"
+        android:pathData="M42,36 L66,36 L66,40 L42,40 Z" />
+    <path
+        android:fillColor="#D0BCFF"
+        android:pathData="M40,44 L68,44 L68,48 L40,48 Z" />
+    <path
+        android:fillColor="#D0BCFF"
+        android:pathData="M40,52 L68,52 L68,56 L40,56 Z" />
+    <path
+        android:fillColor="#D0BCFF"
+        android:pathData="M42,60 L66,60 L66,64 L42,64 Z" />
+    <!-- NFC waves -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M78,38 C84,42 84,50 78,54" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M82,34 C90,40 90,52 82,58" />
+</vector>
+

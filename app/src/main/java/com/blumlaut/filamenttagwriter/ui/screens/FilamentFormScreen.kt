@@ -1,0 +1,418 @@
+package com.blumlaut.filamenttagwriter.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.blumlaut.filamenttagwriter.FilamentViewModel
+import com.blumlaut.filamenttagwriter.data.model.Epc256Encoder
+import com.blumlaut.filamenttagwriter.data.model.Filament
+import com.blumlaut.filamenttagwriter.data.model.Materials
+
+private val DIAMETERS = listOf(1.75f, 2.85f, 3.0f)
+
+private val PRESET_COLORS = listOf(
+    "Red" to 0xFF3700,
+    "Green" to 0x33D700,
+    "Blue" to 0x0080FF,
+    "Orange" to 0xFF8C00,
+    "Purple" to 0x735DF9,
+    "White" to 0xFFFFFF,
+    "Black" to 0x000000,
+    "Yellow" to 0xFFC800,
+    "Cyan" to 0x44F1FF,
+    "Pink" to 0xFF69B4,
+    "Brown" to 0x964B00,
+    "Gray" to 0x808080,
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilamentFormScreen(
+    navController: NavController,
+    viewModel: FilamentViewModel,
+    editFilament: Filament? = null,
+) {
+    var filament by remember {
+        mutableStateOf(editFilament ?: viewModel.createNewFilament())
+    }
+    var showMaterialDropdown by remember { mutableStateOf(false) }
+    var showSubtypeDropdown by remember { mutableStateOf(false) }
+    var showDiameterDropdown by remember { mutableStateOf(false) }
+    var showColorPicker by remember { mutableStateOf(false) }
+    var nameError by remember { mutableStateOf(false) }
+
+    // Update when editFilament changes
+    LaunchedEffect(editFilament?.id) {
+        if (editFilament != null) {
+            filament = editFilament
+        }
+    }
+
+    // Subtype options based on selected material
+    val subtypeOptions by remember(filament.material) {
+        mutableStateOf(Materials.getSubtypesForMaterial(filament.material))
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(if (editFilament != null) "Edit Filament" else "New Filament") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+                actions = {
+                    TextButton(onClick = {
+                        if (filament.name.isBlank()) {
+                            nameError = true
+                        } else {
+                            viewModel.saveFilament(filament)
+                            navController.navigate("catalog") {
+                                popUpTo("read") { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }) {
+                        Text("Save")
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            // Name
+            OutlinedTextField(
+                value = filament.name,
+                onValueChange = { filament = filament.copy(name = it) },
+                label = { Text("Name") },
+                placeholder = { Text("e.g. ELEGOO PLA-CF Red") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = nameError,
+                supportingText = { if (nameError) Text("Name is required") else null },
+                singleLine = true,
+            )
+
+            // Material
+            MaterialDropdown(
+                label = "Material",
+                selectedValue = filament.material,
+                options = Materials.getAllMaterials(),
+                onSelected = { newMaterial ->
+                    // Reset subtype to default for new material family
+                    val defaultSubtypeCode = Materials.SUBTYPE_CODES_REVERSE[newMaterial] ?: 0x0000
+                    filament = filament.copy(
+                        material = newMaterial,
+                        subtypeCode = defaultSubtypeCode,
+                        subtype = newMaterial,
+                    )
+                },
+                expanded = showMaterialDropdown,
+                onExpandedChange = { showMaterialDropdown = it },
+            )
+
+            // Subtype (dropdown based on material family)
+            if (subtypeOptions.isNotEmpty()) {
+                MaterialDropdown(
+                    label = "Subtype",
+                    selectedValue = filament.subtype,
+                    options = subtypeOptions,
+                    onSelected = { newSubtype ->
+                        val code = Materials.SUBTYPE_CODES_REVERSE[newSubtype] ?: filament.subtypeCode
+                        filament = filament.copy(subtypeCode = code, subtype = newSubtype)
+                    },
+                    expanded = showSubtypeDropdown,
+                    onExpandedChange = { showSubtypeDropdown = it },
+                )
+            }
+
+            // Color
+            ColorPickerField(
+                filament = filament,
+                onFilamentChanged = { filament = it },
+                expanded = showColorPicker,
+                onExpandedChange = { showColorPicker = it },
+            )
+
+            // Diameter
+            DiameterDropdown(
+                selectedDiameter = filament.diameter,
+                onSelected = { filament = filament.copy(diameter = it) },
+                expanded = showDiameterDropdown,
+                onExpandedChange = { showDiameterDropdown = it },
+            )
+
+            // Weight
+            OutlinedTextField(
+                value = filament.weight.toString(),
+                onValueChange = {
+                    it.toIntOrNull()?.let { w ->
+                        filament = filament.copy(weight = w.coerceIn(0, 65535))
+                    }
+                },
+                label = { Text("Weight (g)") },
+                placeholder = { Text("1000") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+
+            // Temperature Range
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = filament.minTemp.toString(),
+                    onValueChange = {
+                        it.toIntOrNull()?.let { t ->
+                            filament = filament.copy(minTemp = t.coerceIn(0, 300).toShort())
+                        }
+                    },
+                    label = { Text("Min Temp (°C)") },
+                    placeholder = { Text("190") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = filament.maxTemp.toString(),
+                    onValueChange = {
+                        it.toIntOrNull()?.let { t ->
+                            filament = filament.copy(maxTemp = t.coerceIn(0, 300).toShort())
+                        }
+                    },
+                    label = { Text("Max Temp (°C)") },
+                    placeholder = { Text("230") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                )
+            }
+
+            // Manufacturer Code
+            OutlinedTextField(
+                value = "0x${filament.manufacturerCode.toString(16).uppercase()}",
+                onValueChange = {
+                    it.removePrefix("0x").removePrefix("0X").toIntOrNull(16)?.let { code ->
+                        filament = filament.copy(manufacturerCode = code)
+                    }
+                },
+                label = { Text("Manufacturer Code") },
+                placeholder = { Text("0xEEEEEEEE") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MaterialDropdown(
+    label: String,
+    selectedValue: String,
+    options: List<String>,
+    onSelected: (String) -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+) {
+    Box {
+        OutlinedButton(
+            onClick = { onExpandedChange(true) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = selectedValue, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onSelected(option)
+                        onExpandedChange(false)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiameterDropdown(
+    selectedDiameter: Float,
+    onSelected: (Float) -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+) {
+    Box {
+        OutlinedButton(
+            onClick = { onExpandedChange(true) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "Diameter", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = "${"%.2f".format(selectedDiameter)}mm", style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+        ) {
+            DIAMETERS.forEach { diameter ->
+                DropdownMenuItem(
+                    text = { Text("${"%.2f".format(diameter)}mm") },
+                    onClick = {
+                        onSelected(diameter)
+                        onExpandedChange(false)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColorPickerField(
+    filament: Filament,
+    onFilamentChanged: (Filament) -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+) {
+    var hexInput by remember { mutableStateOf(filament.color) }
+
+    LaunchedEffect(filament.color) {
+        hexInput = filament.color
+    }
+
+    Column {
+        Box {
+            OutlinedButton(
+                onClick = { onExpandedChange(true) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "Color", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = filament.color, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
+                            .border(1.dp, Color.Gray, RoundedCornerShape(4.dp)),
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { onExpandedChange(false) },
+            ) {
+                Row(
+                    modifier = Modifier.padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedTextField(
+                        value = hexInput,
+                        onValueChange = { newValue ->
+                            hexInput = newValue
+                            if (newValue.startsWith("#") && newValue.length == 7) {
+                                newValue.substring(1).toIntOrNull(16)?.let { rgb ->
+                                    onFilamentChanged(filament.copy(
+                                        color = newValue.uppercase(),
+                                        colorRgb = rgb,
+                                    ))
+                                }
+                            }
+                        },
+                        label = { Text("Hex") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
+                            .border(1.dp, Color.Gray, RoundedCornerShape(4.dp)),
+                    )
+                }
+
+                Text(
+                    text = "Presets",
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                Column(
+                    modifier = Modifier.padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    PRESET_COLORS.chunked(4).forEach { rowColors ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            rowColors.forEach { (name, rgb) ->
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF000000L or rgb.toLong()))
+                                            .border(2.dp, if (rgb == filament.colorRgb) MaterialTheme.colorScheme.primary else Color.Gray, CircleShape)
+                                            .clickable {
+                                                onFilamentChanged(filament.copy(
+                                                    color = String.format("#%06X", rgb),
+                                                    colorRgb = rgb,
+                                                ))
+                                                hexInput = String.format("#%06X", rgb)
+                                                onExpandedChange(false)
+                                            },
+                                    )
+                                    Text(
+                                        text = name,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(top = 2.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

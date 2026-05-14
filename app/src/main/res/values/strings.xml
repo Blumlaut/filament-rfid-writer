@@ -1,4 +1,94 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Blumlaut's Filament Tag Writer</string>
+    <string name="app_name">Blumlaut\'s Filament Tag Writer</string>
+
+    <!-- Home -->
+    <string name="home_title">Filament Tag Writer</string>
+    <string name="home_subtitle">Read, write, and catalog NTAG213 RFID tags on filament spools</string>
+    <string name="btn_read_tag">Read Tag</string>
+    <string name="btn_catalog">Catalog</string>
+    <string name="btn_new_profile">New Filament Profile</string>
+
+    <!-- Read Screen -->
+    <string name="read_title">Read Tag</string>
+    <string name="read_waiting">Hold your phone near an NTAG213 filament tag</string>
+    <string name="read_reading">Reading tag…</string>
+    <string name="read_save">Save to Catalog</string>
+    <string name="read_another">Read Another</string>
+    <string name="read_failed">Read Failed</string>
+    <string name="read_try_again">Try Again</string>
+    <string name="nfc_not_available">NFC hardware not available on this device.</string>
+    <string name="nfc_not_enabled">Please enable NFC in device settings.</string>
+
+    <!-- Write Screen -->
+    <string name="write_title">Write to Tag</string>
+    <string name="write_select">Select Filament</string>
+    <string name="write_waiting">Hold your phone near an NTAG213 tag to write</string>
+    <string name="write_writing">Writing to tag…</string>
+    <string name="write_success">Write Successful!</string>
+    <string name="write_success_msg">The filament data has been written to the tag.</string>
+    <string name="write_failed">Write Failed</string>
+    <string name="write_another">Write Another</string>
+    <string name="write_no_filaments">No filaments in catalog</string>
+    <string name="write_no_filaments_msg">Add a filament profile first.</string>
+
+    <!-- Catalog -->
+    <string name="catalog_title">Filament Catalog</string>
+    <string name="catalog_empty">No filaments yet</string>
+    <string name="catalog_empty_msg">Tap + to add a filament profile, or read a tag to import one.</string>
+    <string name="catalog_add">Add Filament</string>
+    <string name="catalog_delete_title">Delete Filament</string>
+    <string name="catalog_delete_msg">Delete \'%s\' from catalog? This cannot be undone.</string>
+    <string name="catalog_delete">Delete</string>
+    <string name="catalog_cancel">Cancel</string>
+
+    <!-- Form -->
+    <string name="form_new">New Filament</string>
+    <string name="form_edit">Edit Filament</string>
+    <string name="form_save">Save</string>
+    <string name="form_name">Name</string>
+    <string name="form_name_placeholder">e.g. ELEGOO PLA-CF Red</string>
+    <string name="form_name_required">Name is required</string>
+    <string name="form_material">Material</string>
+    <string name="form_subtype">Subtype</string>
+    <string name="form_subtype_placeholder">e.g. CF, HF, GF</string>
+    <string name="form_color">Color</string>
+    <string name="form_color_hex">Hex</string>
+    <string name="form_color_presets">Presets</string>
+    <string name="form_diameter">Diameter</string>
+    <string name="form_weight">Weight (g)</string>
+    <string name="form_year">Year</string>
+    <string name="form_month">Month</string>
+    <string name="form_manufacturer">Manufacturer Code</string>
+    <string name="form_manufacturer_placeholder">0xEEEEEEEE</string>
+
+    <!-- Materials -->
+    <string-array name="materials">
+        <item>PLA</item>
+        <item>PETG</item>
+        <item>ABS</item>
+        <item>TPU</item>
+        <item>PA</item>
+        <item>CPE</item>
+        <item>PC</item>
+        <item>PVA</item>
+        <item>ASA</item>
+    </string-array>
+
+    <!-- Months -->
+    <string-array name="months">
+        <item>Jan</item>
+        <item>Feb</item>
+        <item>Mar</item>
+        <item>Apr</item>
+        <item>May</item>
+        <item>Jun</item>
+        <item>Jul</item>
+        <item>Aug</item>
+        <item>Sep</item>
+        <item>Oct</item>
+        <item>Nov</item>
+        <item>Dec</item>
+    </string-array>
 </resources>
+
