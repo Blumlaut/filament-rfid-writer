@@ -106,30 +106,49 @@ object NfcReaderWriter {
      * Tries without authentication first, falls back to NTAG213 password auth.
      */
     fun writeFilament(tag: Tag, filament: Filament): WriteResult {
+        val tagId = tag.id.joinToString(" ") { String.format("%02X", it) }
+        Log.d(TAG, "writeFilament started, tag ID: $tagId")
+
         val ml = MifareUltralight.get(tag)
         if (ml == null) return WriteResult.Error("Tag is not an NTAG213 / Mifare Ultralight")
 
         return try {
+            Log.d(TAG, "Connecting to tag...")
             ml.connect()
+            Log.d(TAG, "Connected")
 
             // Try writing without authentication first
-            val writeResult = tryWriteBlocks(ml, filament, authenticate = false)
-            if (writeResult) {
+            Log.d(TAG, "Attempting write without authentication...")
+            val noAuthResult = tryWriteBlocks(ml, filament, authenticate = false)
+            if (noAuthResult.success) {
                 ml.close()
-                return WriteResult.Success
+                Log.d(TAG, "Write succeeded without auth")
+                return if (noAuthResult.errorMessage.isNullOrBlank()) {
+                    WriteResult.Success
+                } else {
+                    WriteResult.Error(noAuthResult.errorMessage!!)
+                }
             }
+            Log.w(TAG, "No-auth write failed: ${noAuthResult.errorMessage}")
 
             // Failed without auth, try with NTAG213 password authentication
+            Log.d(TAG, "Attempting auth + write...")
             val authResult = tryWriteBlocks(ml, filament, authenticate = true)
             ml.close()
 
-            if (authResult) {
-                WriteResult.Success
-            } else {
-                WriteResult.Error("Failed to write tag (authentication may be required with a different password)")
+            if (authResult.success) {
+                Log.d(TAG, "Write succeeded with auth")
+                return if (authResult.errorMessage.isNullOrBlank()) {
+                    WriteResult.Success
+                } else {
+                    WriteResult.Error(authResult.errorMessage!!)
+                }
             }
+            Log.w(TAG, "Auth write failed: ${authResult.errorMessage}")
+            WriteResult.Error("Write failed: ${authResult.errorMessage}")
         } catch (e: Exception) {
             try { ml.close() } catch (_: Exception) {}
+            Log.e(TAG, "Write exception: ${e.javaClass.simpleName}: ${e.message}")
             WriteResult.Error("Failed to write tag: ${e.message}")
         }
     }
@@ -167,21 +186,32 @@ object NfcReaderWriter {
         return pages
     }
 
-    private fun tryWriteBlocks(ml: MifareUltralight, filament: Filament, authenticate: Boolean): Boolean {
+    private data class WriteAttemptResult(val success: Boolean, val errorMessage: String?)
+
+    private fun tryWriteBlocks(ml: MifareUltralight, filament: Filament, authenticate: Boolean): WriteAttemptResult {
         return try {
             if (authenticate) {
-                authenticateNtag213(ml, DEFAULT_PASSWORD)
+                Log.d(TAG, "Authenticating with password 0xA0A1A2A3...")
+                val authOk = authenticateNtag213(ml, DEFAULT_PASSWORD)
+                if (!authOk) {
+                    return WriteAttemptResult(false, "Authentication failed (wrong password or tag not password-protected)")
+                }
+                Log.d(TAG, "Authentication successful")
             }
 
             val blocks = Epc256Encoder.encodeNtagBlocks(filament)
+            Log.d(TAG, "Writing ${blocks.size} blocks to tag")
             for ((page, block) in blocks) {
+                val hex = block.joinToString(" ") { String.format("%02X", it) }
+                Log.d(TAG, "Writing page $page (0x${String.format("%02X", page)}): [$hex]")
                 ml.writePage(page, block)
+                Log.d(TAG, "  Page $page written OK")
                 Thread.sleep(10)
             }
-            true
+            WriteAttemptResult(true, null)
         } catch (e: Exception) {
-            Log.e(TAG, "Write failed: ${e.message}")
-            false
+            Log.e(TAG, "Write attempt failed: ${e.javaClass.simpleName}: ${e.message}")
+            WriteAttemptResult(false, "${e.javaClass.simpleName}: ${e.message}")
         }
     }
 
@@ -198,19 +228,31 @@ object NfcReaderWriter {
             val authCommand1 = ByteArray(5)
             authCommand1[0] = 0x1B.toByte()
             System.arraycopy(password, 0, authCommand1, 1, 4)
+            Log.d(TAG, "Auth step 1: sending ${authCommand1.joinToString(" ") { String.format("%02X", it) }}")
             val response = ml.transceive(authCommand1)
 
-            if (response == null || response.size < 4) return false
+            if (response == null) {
+                Log.w(TAG, "Auth step 1: no response")
+                return false
+            }
+            Log.d(TAG, "Auth step 1: response ${response.joinToString(" ") { String.format("%02X", it) }}")
+
+            if (response.size < 4) {
+                Log.w(TAG, "Auth step 1: response too short (${response.size} bytes)")
+                return false
+            }
 
             // Step 2: Send the random bytes back
             val authCommand2 = ByteArray(5)
             authCommand2[0] = 0x1B.toByte()
             System.arraycopy(response, 0, authCommand2, 1, 4)
-            ml.transceive(authCommand2)
+            Log.d(TAG, "Auth step 2: sending ${authCommand2.joinToString(" ") { String.format("%02X", it) }}")
+            val response2 = ml.transceive(authCommand2)
+            Log.d(TAG, "Auth step 2: response ${response2?.let { it.joinToString(" ") { String.format("%02X", it) } } ?: "null"}")
 
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Auth failed: ${e.message}")
+            Log.w(TAG, "Auth exception: ${e.javaClass.simpleName}: ${e.message}")
             false
         }
     }
