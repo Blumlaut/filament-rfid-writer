@@ -26,10 +26,11 @@ fun HomeScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
+            // M3 Expressive: emphasized headlineLarge as hero moment
             Text(
                 text = "Blumlaut's Filament Tag Writer",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -42,29 +43,45 @@ fun HomeScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(48.dp))
 
+            // M3 Expressive: extraLarge shape (28dp) + emphasized title on buttons
             FilledTonalButton(
                 onClick = { navController.navigate("read") },
+                shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
             ) {
-                Text("Read Tag", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Read Tag",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             FilledTonalButton(
                 onClick = { navController.navigate("catalog") },
+                shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
             ) {
-                Text("Catalog", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Catalog",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedButton(
                 onClick = { navController.navigate("form/new") },
+                shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
             ) {
-                Text("+ New Filament Profile", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "+ New Filament Profile",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         }
     }

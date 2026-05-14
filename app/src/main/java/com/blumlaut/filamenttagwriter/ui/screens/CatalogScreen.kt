@@ -5,7 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -160,9 +160,10 @@ fun FilamentCard(
     onSelect: (() -> Unit)? = null,
     isSelected: Boolean = false,
 ) {
+    // M3 Expressive: extraLarge shape (28dp) for card hero surface
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onSelect?.invoke() },
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = if (isSelected) {
             CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         } else {
@@ -175,14 +176,18 @@ fun FilamentCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
+                // M3 Expressive: circular color swatch
                 Box(
-                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp))
+                    modifier = Modifier.size(40.dp).clip(CircleShape)
                         .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong())),
                 )
                 Column(modifier = Modifier.weight(1f)) {
+                    // M3 Expressive: emphasized headline for selection
                     Text(
                         text = filament.name.ifBlank { "Unnamed" },
-                        fontWeight = FontWeight.SemiBold,
+                        style = if (isSelected) MaterialTheme.typography.titleLarge
+                               else MaterialTheme.typography.titleMedium,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -202,8 +207,8 @@ fun FilamentCard(
             }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
             ) {
                 DetailChip("${"%.2f".format(filament.diameter)}mm")
                 DetailChip("${filament.weight}g")
@@ -216,11 +221,16 @@ fun FilamentCard(
 
 @Composable
 private fun DetailChip(text: String) {
-    Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 2.dp) {
+    // M3 Expressive: extraSmall shape (4dp) + labelSmall for compact chips
+    Surface(
+        shape = MaterialTheme.shapes.extraSmall,
+        tonalElevation = 1.dp,
+    ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
         )
     }
 }

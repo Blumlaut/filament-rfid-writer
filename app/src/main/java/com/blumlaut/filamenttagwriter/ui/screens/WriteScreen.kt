@@ -46,6 +46,7 @@ fun WriteScreen(
             if (filaments.isEmpty()) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -60,25 +61,33 @@ fun WriteScreen(
                     }
                 }
             } else {
-                // Filament selector button
+                // M3 Expressive: emphasized title on hero button, extraLarge shape
                 FilledTonalButton(
                     onClick = { showSelector = true },
+                    shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = selectedFilament?.name?.ifBlank { "Select Filament" } ?: "Select Filament",
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
 
-                // Selected filament preview
+                // Selected filament preview — extraLarge hero card
                 selectedFilament?.let { filament ->
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        shape = MaterialTheme.shapes.extraLarge,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text(text = filament.name.ifBlank { "Unnamed" }, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text(
+                                text = filament.name.ifBlank { "Unnamed" },
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
                             Text(
                                 text = "${filament.subtype} | ${"%.2f".format(filament.diameter)}mm | ${filament.weight}g | ${filament.color} | ${filament.minTemp}–${filament.maxTemp}°C",
                                 style = MaterialTheme.typography.bodySmall,
