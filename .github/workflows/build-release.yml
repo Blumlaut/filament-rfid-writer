@@ -46,6 +46,5 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           files: app/build/outputs/apk/release/*.apk
-          allow_update: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
