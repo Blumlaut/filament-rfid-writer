@@ -50,8 +50,6 @@ class FilamentViewModel(private val database: FilamentDatabase) : ViewModel() {
     /** Current bottom-nav tab. Used to route NFC intents intelligently. */
     var currentTab: MutableState<String> = mutableStateOf("read")
 
-    enum class Tab { READ, CATALOG, WRITE }
-
     /**
      * Save a filament to the catalog.
      */

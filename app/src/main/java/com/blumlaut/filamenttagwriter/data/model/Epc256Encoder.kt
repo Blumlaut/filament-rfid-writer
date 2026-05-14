@@ -224,9 +224,4 @@ object Epc256Encoder {
     fun rgbToHex(rgb: Int): String {
         return String.format("#%06X", rgb and 0xFFFFFF)
     }
-
-    fun hexToRgb(hex: String): Int {
-        val clean = hex.removePrefix("#")
-        return clean.toInt(16)
-    }
 }
