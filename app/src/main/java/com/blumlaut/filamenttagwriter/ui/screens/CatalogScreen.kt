@@ -56,8 +56,10 @@ fun CatalogScreen(
             TopAppBar(title = { Text("Filament Catalog") })
         },
         floatingActionButton = {
+            // M3 Expressive: FAB uses full circular shape (md.comp.fab.container.shape)
             FloatingActionButton(
                 onClick = { navController.navigate("form/new") },
+                shape = androidx.compose.foundation.shape.CircleShape,
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "Add Filament")
             }

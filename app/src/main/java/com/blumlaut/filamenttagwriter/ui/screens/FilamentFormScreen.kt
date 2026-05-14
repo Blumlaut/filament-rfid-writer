@@ -414,22 +414,23 @@ private fun ColorPickerField(
                 shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "Color", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "Color", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Text(text = filament.color, style = MaterialTheme.typography.bodyLarge)
+                        // M3 Expressive: circular color swatch, aligned with value
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
+                                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                        )
                     }
-                    // M3 Expressive: circular color swatch
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
-                    )
                 }
             }
             DropdownMenu(
