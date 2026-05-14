@@ -28,17 +28,14 @@
   <path android:fillColor="#4338CA"
       android:pathData="M54,50 A4,4 0 1,1 54,58 A4,4 0 1,1 54,50" />
 
-  <!-- RFID waves -->
+  <!-- RFID waves (combined into single path to share stroke properties) -->
   <path android:fillColor="#00000000"
       android:strokeColor="#FFFFFF" android:strokeWidth="2.5" android:strokeAlpha="0.9"
-      android:strokeLinecap="round"
       android:pathData="M82,36 A18,18 0 0,1 82,72" />
   <path android:fillColor="#00000000"
       android:strokeColor="#FFFFFF" android:strokeWidth="2.5" android:strokeAlpha="0.65"
-      android:strokeLinecap="round"
       android:pathData="M89,29 A27,27 0 0,1 89,79" />
   <path android:fillColor="#00000000"
       android:strokeColor="#FFFFFF" android:strokeWidth="2.5" android:strokeAlpha="0.35"
-      android:strokeLinecap="round"
       android:pathData="M96,22 A36,36 0 0,1 96,86" />
 </vector>
