@@ -336,10 +336,17 @@ private fun MaterialDropdown(
             value = selectedValue,
             onValueChange = {},
             label = { Text(label) },
-            readOnly = true,
             shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier.fillMaxWidth().clickable { onExpandedChange(true) },
+            modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+        )
+        // Click overlay to open dropdown
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .heightIn(max = 56.dp)
+                .clickable(enabled = !expanded) { onExpandedChange(true) },
         )
         DropdownMenu(
             expanded = expanded,
@@ -370,10 +377,17 @@ private fun DiameterDropdown(
             value = "${"%.2f".format(selectedDiameter)}mm",
             onValueChange = {},
             label = { Text("Diameter") },
-            readOnly = true,
             shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier.fillMaxWidth().clickable { onExpandedChange(true) },
+            modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+        )
+        // Click overlay to open dropdown
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .heightIn(max = 56.dp)
+                .clickable(enabled = !expanded) { onExpandedChange(true) },
         )
         DropdownMenu(
             expanded = expanded,
@@ -405,32 +419,38 @@ private fun ColorPickerField(
         hexInput = filament.color
     }
 
-   
-        Box {
-            OutlinedTextField(
-                value = filament.color,
-                onValueChange = {},
-                label = { Text("Color") },
-                readOnly = true,
-                shape = MaterialTheme.shapes.extraLarge,
-                modifier = Modifier.fillMaxWidth().clickable { onExpandedChange(true) },
-                trailingIcon = {
-                    // M3 Expressive: circular color swatch
-                    Box(
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
-                    )
-                },
-                singleLine = true,
-            )
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { onExpandedChange(false) },
-            ) {
+    Box {
+        OutlinedTextField(
+            value = filament.color,
+            onValueChange = {},
+            label = { Text("Color") },
+            shape = MaterialTheme.shapes.extraLarge,
+            modifier = Modifier.fillMaxWidth(),
+            trailingIcon = {
+                // M3 Expressive: circular color swatch
+                Box(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
+                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                )
+            },
+            singleLine = true,
+        )
+        // Click overlay to open dropdown
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .heightIn(max = 56.dp)
+                .clickable(enabled = !expanded) { onExpandedChange(true) },
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+        ) {
                 Row(
                     modifier = Modifier.padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
