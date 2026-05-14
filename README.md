@@ -4,7 +4,7 @@ An Android app that reads, writes, and catalogs NTAG213 RFID tags on 3D printer 
 
 ## Demo
 
-<video src="docs/demo.mp4" controls></video>
+![Demo](https://raw.githubusercontent.com/Blumlaut/filament-rfid-writer/main/docs/demo.mp4)
 
 ## Features
 
