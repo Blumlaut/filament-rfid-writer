@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Blumlaut\'s Filament Tag Writer</string>
+    <string name="app_name">Filament RFID Writer</string>
 
     <!-- Home -->
-    <string name="home_title">Filament Tag Writer</string>
+    <string name="home_title">Filament RFID Writer</string>
     <string name="home_subtitle">Read, write, and catalog NTAG213 RFID tags on filament spools</string>
     <string name="btn_read_tag">Read Tag</string>
     <string name="btn_catalog">Catalog</string>

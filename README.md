@@ -1,4 +1,4 @@
-# Blumlaut's Filament Tag Writer
+# Filament RFID Writer
 
 An Android app that reads, writes, and catalogs NTAG213 RFID tags on 3D printer filament spools.
 

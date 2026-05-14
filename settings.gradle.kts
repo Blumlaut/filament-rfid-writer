@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "FilamentTagWriter"
+rootProject.name = "FilamentRFIDWriter"
 include(":app")

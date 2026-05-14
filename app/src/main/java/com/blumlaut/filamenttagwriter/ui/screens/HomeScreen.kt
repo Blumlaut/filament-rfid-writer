@@ -15,7 +15,7 @@ import androidx.navigation.NavController
 fun HomeScreen(navController: NavController) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Filament Tag Writer") })
+            TopAppBar(title = { Text("Filament RFID Writer") })
         },
     ) { padding ->
         Column(
@@ -28,7 +28,7 @@ fun HomeScreen(navController: NavController) {
         ) {
             // M3 Expressive: emphasized headlineLarge as hero moment
             Text(
-                text = "Blumlaut's Filament Tag Writer",
+                text = "Filament RFID Writer",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center,

@@ -2,7 +2,7 @@
 
 ## What This Is
 
-**Blumlaut's Filament Tag Writer** — an Android app (Kotlin + Jetpack Compose) that reads, writes, and catalogs NTAG213 RFID tags on 3D printer filament spools.
+**Filament RFID Writer** — an Android app (Kotlin + Jetpack Compose) that reads, writes, and catalogs NTAG213 RFID tags on 3D printer filament spools.
 
 The tag encoding format is based on **community reverse-engineering** by [DnG-Crafts/ELG-RFID](https://github.com/DnG-Crafts/ELG-RFID) and [Savion/elegoo-rfid-editor](https://github.com/Savion/elegoo-rfid-editor). The official ELEGOO documentation contains errors and **must not** be used as reference.
 
