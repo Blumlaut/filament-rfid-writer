@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    name: Build & Attach APK
+    name: Build & Release APK + AAB
     runs-on: ubuntu-latest
 
     steps:
@@ -31,12 +31,12 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/keystore.jks
 
-      - name: Build release APK
+      - name: Build release APK + AAB
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew :app:assembleRelease
+        run: ./gradlew :app:assembleRelease :app:bundleRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -44,10 +44,18 @@ jobs:
           name: filament-rfid-writer-apk
           path: app/build/outputs/apk/release/*.apk
 
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filament-rfid-writer-aab
+          path: app/build/outputs/bundle/release/*.aab
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: app/build/outputs/apk/release/*.apk
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
