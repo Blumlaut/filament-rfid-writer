@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -322,6 +324,7 @@ fun FilamentFormScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MaterialDropdown(
     label: String,
@@ -331,24 +334,30 @@ private fun MaterialDropdown(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
 ) {
-    Box {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+    ) {
         OutlinedTextField(
             value = selectedValue,
             onValueChange = {},
             label = { Text(label) },
             shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-        // Click overlay to open dropdown
-        Box(
             modifier = Modifier
-                .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .heightIn(max = 56.dp)
-                .clickable(enabled = !expanded) { onExpandedChange(true) },
+                .menuAnchor(),
+            readOnly = true,
+            singleLine = true,
+            trailingIcon = {
+                IconButton(onClick = { onExpandedChange(!expanded) }) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                        contentDescription = "Select material",
+                    )
+                }
+            },
         )
-        DropdownMenu(
+        ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { onExpandedChange(false) },
         ) {
@@ -365,6 +374,7 @@ private fun MaterialDropdown(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DiameterDropdown(
     selectedDiameter: Float,
@@ -372,24 +382,30 @@ private fun DiameterDropdown(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
 ) {
-    Box {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+    ) {
         OutlinedTextField(
             value = "${"%.2f".format(selectedDiameter)}mm",
             onValueChange = {},
             label = { Text("Diameter") },
             shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-        // Click overlay to open dropdown
-        Box(
             modifier = Modifier
-                .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .heightIn(max = 56.dp)
-                .clickable(enabled = !expanded) { onExpandedChange(true) },
+                .menuAnchor(),
+            readOnly = true,
+            singleLine = true,
+            trailingIcon = {
+                IconButton(onClick = { onExpandedChange(!expanded) }) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                        contentDescription = "Select diameter",
+                    )
+                }
+            },
         )
-        DropdownMenu(
+        ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { onExpandedChange(false) },
         ) {
@@ -406,6 +422,7 @@ private fun DiameterDropdown(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ColorPickerField(
     filament: Filament,
@@ -419,13 +436,20 @@ private fun ColorPickerField(
         hexInput = filament.color
     }
 
-    Box {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+    ) {
         OutlinedTextField(
             value = filament.color,
             onValueChange = {},
             label = { Text("Color") },
             shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
+            readOnly = true,
+            singleLine = true,
             trailingIcon = {
                 // M3 Expressive: circular color swatch
                 Box(
@@ -437,98 +461,88 @@ private fun ColorPickerField(
                         .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
                 )
             },
-            singleLine = true,
         )
-        // Click overlay to open dropdown
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .heightIn(max = 56.dp)
-                .clickable(enabled = !expanded) { onExpandedChange(true) },
-        )
-        DropdownMenu(
+        ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { onExpandedChange(false) },
         ) {
-                Row(
-                    modifier = Modifier.padding(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = hexInput,
-                        onValueChange = { newValue ->
-                            hexInput = newValue
-                            if (newValue.startsWith("#") && newValue.length == 7) {
-                                newValue.substring(1).toIntOrNull(16)?.let { rgb ->
-                                    onFilamentChanged(filament.copy(
-                                        color = newValue.uppercase(),
-                                        colorRgb = rgb,
-                                    ))
-                                }
+            Row(
+                modifier = Modifier.padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = hexInput,
+                    onValueChange = { newValue ->
+                        hexInput = newValue
+                        if (newValue.startsWith("#") && newValue.length == 7) {
+                            newValue.substring(1).toIntOrNull(16)?.let { rgb ->
+                                onFilamentChanged(filament.copy(
+                                    color = newValue.uppercase(),
+                                    colorRgb = rgb,
+                                ))
                             }
-                        },
-                        label = { Text("Hex") },
-                        shape = MaterialTheme.shapes.extraLarge,
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                    )
-                    // M3 Expressive: circular color preview
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
-                    )
-                }
-
-                Text(
-                    text = "Presets",
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        }
+                    },
+                    label = { Text("Hex") },
+                    shape = MaterialTheme.shapes.extraLarge,
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
                 )
-                Column(
-                    modifier = Modifier.padding(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    PRESET_COLORS.chunked(4).forEach { rowColors ->
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            rowColors.forEach { (name, rgb) ->
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFF000000L or rgb.toLong()))
-                                            .border(2.dp, if (rgb == filament.colorRgb) MaterialTheme.colorScheme.primary else Color.Gray, CircleShape)
-                                            .clickable {
-                                                onFilamentChanged(filament.copy(
-                                                    color = String.format("#%06X", rgb),
-                                                    colorRgb = rgb,
-                                                ))
-                                                hexInput = String.format("#%06X", rgb)
-                                                onExpandedChange(false)
-                                            },
-                                    )
-                                    Text(
-                                        text = name,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        modifier = Modifier.padding(top = 2.dp),
-                                    )
-                                }
+                // M3 Expressive: circular color preview
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
+                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                )
+            }
+
+            Text(
+                text = "Presets",
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+            Column(
+                modifier = Modifier.padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                PRESET_COLORS.chunked(4).forEach { rowColors ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        rowColors.forEach { (name, rgb) ->
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF000000L or rgb.toLong()))
+                                        .border(2.dp, if (rgb == filament.colorRgb) MaterialTheme.colorScheme.primary else Color.Gray, CircleShape)
+                                        .clickable {
+                                            onFilamentChanged(filament.copy(
+                                                color = String.format("#%06X", rgb),
+                                                colorRgb = rgb,
+                                            ))
+                                            hexInput = String.format("#%06X", rgb)
+                                            onExpandedChange(false)
+                                        },
+                                )
+                                Text(
+                                    text = name,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(top = 2.dp),
+                                )
                             }
                         }
                     }
                 }
             }
         }
-
+    }
 }
