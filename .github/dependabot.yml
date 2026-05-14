@@ -1,9 +1,9 @@
-# Dependabot configuration for automatic dependency updates
+# Dependabot — automated dependency updates
 # Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates
 
 version: 2
 updates:
-  # Android Gradle Plugin, Kotlin, KSP, and other Gradle plugins
+  # ── Gradle dependencies (version catalog + build scripts) ──────────────
   - package-ecosystem: "gradle"
     directory: "/"
     target-branch: "main"
@@ -12,28 +12,53 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "Europe/Berlin"
-    # Version catalog (libs.versions.toml) + build.gradle.kts
+    open-pull-requests-limit: 10
     labels:
       - "dependencies"
       - "gradle"
     commit-message:
       prefix: "chore(deps):"
-    # Group compatible minor/patch updates to reduce PR noise
+      include: "scope"
+
+    # Group related updates to reduce PR noise
     groups:
-      androidx:
+      androidx-compose:
         patterns:
-          - "androidx.*"
-        update-types:
-          - "minor"
-          - "patch"
-      compose:
-        patterns:
-          - "androidx.compose.*"
+          - "androidx.compose:*"
+          - "androidx.compose.ui:*"
+          - "androidx.compose.material:*"
+          - "androidx.compose.material3:*"
         update-types:
           - "minor"
           - "patch"
 
-  # GitHub Actions (if added later)
+      androidx-core:
+        patterns:
+          - "androidx.core:*"
+          - "androidx.activity:*"
+          - "androidx.lifecycle:*"
+          - "androidx.navigation:*"
+          - "androidx.room:*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Kotlin + AGP + KSP are critical build deps — update individually
+      # so we can test each upgrade before combining
+
+  # ── Gradle wrapper ─────────────────────────────────────────────────────
+  - package-ecosystem: "gradle-wrapper"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "gradle-wrapper"
+    commit-message:
+      prefix: "chore(gradle-wrapper):"
+
+  # ── GitHub Actions ─────────────────────────────────────────────────────
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
