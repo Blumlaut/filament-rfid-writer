@@ -1,6 +1,10 @@
 # Filament RFID Writer
 
+<img src="https://raw.githubusercontent.com/Blumlaut/filament-rfid-writer/main/docs/logo.png" alt="Filament RFID Writer" width="96" align="left" style="margin-right:16px" />
+
 An Android app that reads, writes, and catalogs NTAG213 RFID tags on 3D printer filament spools.
+
+<br clear="left"/>
 
 ## Demo
 
