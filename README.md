@@ -28,6 +28,12 @@ An Android app that reads, writes, and catalogs NTAG213 & NTAG215 RFID tags on 3
 
 The tag encoding format is based on community reverse-engineering by [DnG-Crafts](https://github.com/DnG-Crafts/ELG-RFID) and [Savion](https://github.com/Savion/elegoo-rfid-editor). Many thanks to both for their thorough work. The official ELEGOO documentation contains errors and should not be relied upon.
 
+## Support
+
+If you find this app useful, consider buying me a coffee!
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/blumlaut)
+
 ## Building
 
 ```bash
