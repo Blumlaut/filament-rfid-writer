@@ -43,20 +43,27 @@ object NameParser {
         val words = name.split(Regex("[\\s,|/-]+"))
 
         // Detect material
-        val material = KNOWN_MATERIALS.find { upper.contains(it) }
+        val materialMatch = KNOWN_MATERIALS.find { upper.contains(it) }
+        val material = materialMatch
             ?.let { Materials.MATERIAL_CODES_REVERSE[it]?.let { code -> Materials.resolveMaterial(code) } }
-            ?: KNOWN_MATERIALS.find { upper.contains(it) }
+            ?: materialMatch
 
         // Detect subtype — try exact subtype names first (e.g. "PLA-CF", "PLA Silk"), then material default
-        val subtype = KNOWN_SUBTYPES.find { upper.contains(it) }
+        val subtypeMatch = KNOWN_SUBTYPES.find { upper.contains(it) }
+        val subtype = subtypeMatch
             ?.let { Materials.SUBTYPE_CODES_REVERSE[it]?.let { code -> Materials.resolveSubtype(code) } }
             ?: material // fallback: subtype = material (e.g. "PLA")
 
-        // Detect color — look for color words that are NOT material/subtype keywords
+        // Detect color — look for color words that are NOT part of the detected material/subtype.
+        // Only exclude words that are substrings of the ACTUALLY detected material/subtype,
+        // not any material/subtype in the known lists. (Fix: "Red" alone should not be blocked
+        // by the "PLA Red Copper" subtype if that subtype wasn't detected.)
         val color = words.find { word ->
             val lower = word.lowercase()
-            KNOWN_COLORS.contains(lower) && !KNOWN_MATERIALS.any { m -> m.contains(word.uppercase()) } &&
-                !KNOWN_SUBTYPES.any { s -> s.contains(word.uppercase()) }
+            val wUpper = word.uppercase()
+            KNOWN_COLORS.contains(lower) &&
+                !(materialMatch != null && materialMatch.contains(wUpper)) &&
+                !(subtypeMatch != null && subtypeMatch.contains(wUpper))
         }?.let { normalizeColor(it) }
 
         return ParsedName(material, subtype, color)
