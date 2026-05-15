@@ -16,6 +16,7 @@ An Android app that reads, writes, and catalogs NTAG213 & NTAG215 RFID tags on 3
 - **Write tags** — pick a filament from your catalog and write it to a blank tag
 - **Catalog** — save, edit, and search your filament profiles
 - **Smart autofill** — type a name like "Elegoo PLA+ White" and material, subtype, and color fill in automatically
+- **Network Connectivity** — configure your printer's IP and see which filaments are currently installed, wirelessly import their profiles into the app!
 
 ## Screenshots
 
