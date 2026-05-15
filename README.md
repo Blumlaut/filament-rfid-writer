@@ -19,9 +19,9 @@ An Android app that reads, writes, and catalogs NTAG213 & NTAG215 RFID tags on 3
 
 ## Screenshots
 
-| Read Tag | Filament Form | Catalog |
-|:---:|:---:|:---:|
-| ![Read Tag](https://raw.githubusercontent.com/Blumlaut/filament-rfid-writer/main/docs/app-pic-1.jpg) | ![New Filament](https://raw.githubusercontent.com/Blumlaut/filament-rfid-writer/main/docs/app-pic-2.jpg) | ![Catalog](https://raw.githubusercontent.com/Blumlaut/filament-rfid-writer/main/docs/app-pic-3.jpg) |
+| Read Tag | Filament Form | Catalog | Printers |
+|:---:|:---:|:---:|:---:|
+| ![Read Tag](https://raw.githubusercontent.com/Blumlaut/filament-rfid-writer/main/docs/app-pic-1.jpg) | ![New Filament](https://raw.githubusercontent.com/Blumlaut/filament-rfid-writer/main/docs/app-pic-2.jpg) | ![Catalog](https://raw.githubusercontent.com/Blumlaut/filament-rfid-writer/main/docs/app-pic-3.jpg) | ![Printers](https://raw.githubusercontent.com/Blumlaut/filament-rfid-writer/main/docs/app-pic-4.png) |
 
 ## Credits
 
