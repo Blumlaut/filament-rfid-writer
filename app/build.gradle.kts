@@ -82,6 +82,9 @@ dependencies {
     // ViewModel + LiveData for Compose
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
+    // OkHttp (WebSocket for CANVAS printer integration)
+    implementation(libs.okhttp)
+
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

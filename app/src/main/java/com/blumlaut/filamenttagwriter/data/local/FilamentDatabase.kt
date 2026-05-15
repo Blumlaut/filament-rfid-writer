@@ -5,10 +5,11 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [FilamentEntity::class], version = 2, exportSchema = false)
+@Database(entities = [FilamentEntity::class, PrinterEntity::class], version = 3, exportSchema = false)
 abstract class FilamentDatabase : RoomDatabase() {
 
     abstract fun filamentDao(): FilamentDao
+    abstract fun printerDao(): PrinterDao
 
     companion object {
         @Volatile

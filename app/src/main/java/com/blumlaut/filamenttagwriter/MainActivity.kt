@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.DeviceHub
 import androidx.compose.material.icons.filled.SimCardDownload
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -38,6 +39,7 @@ private data class BottomNavItem(val route: String, val label: String, val icon:
 private val BOTTOM_NAV_ITEMS = listOf(
     BottomNavItem("read", "Read", Icons.AutoMirrored.Filled.CallReceived),
     BottomNavItem("catalog", "Catalog", Icons.AutoMirrored.Filled.List),
+    BottomNavItem("printer", "Printer", Icons.Default.DeviceHub),
     BottomNavItem("write", "Write", Icons.Default.SimCardDownload),
 )
 
@@ -48,6 +50,15 @@ class MainActivity : ComponentActivity() {
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
                 return FilamentViewModel((application as FilamentTagApp).database) as T
+            }
+        }
+    }
+
+    private val printerViewModel: PrinterViewModel by viewModels {
+        object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return PrinterViewModel((application as FilamentTagApp).database) as T
             }
         }
     }
@@ -127,6 +138,11 @@ class MainActivity : ComponentActivity() {
                                 CatalogScreen(
                                     navController = navController,
                                     viewModel = viewModel,
+                                )
+                            }
+                            composable("printer") {
+                                PrinterScreen(
+                                    viewModel = printerViewModel,
                                 )
                             }
                             composable("write") {
