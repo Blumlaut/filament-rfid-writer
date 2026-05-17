@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.blumlaut.filamenttagwriter.FilamentViewModel
 import com.blumlaut.filamenttagwriter.data.model.Filament
 
@@ -130,6 +131,15 @@ fun CatalogScreen(
                                 onDelete = {
                                     deleteCandidate = filament
                                     showDeleteDialog = true
+                                },
+                                onSelect = {
+                                    viewModel.selectedFilamentForWrite.value = filament
+                                    navController.navigate("write") {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            inclusive = false
+                                        }
+                                        launchSingleTop = true
+                                    }
                                 },
                             )
                         }
