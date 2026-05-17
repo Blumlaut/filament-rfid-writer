@@ -11,6 +11,9 @@ import com.blumlaut.filamenttagwriter.data.local.FilamentEntity
 import com.blumlaut.filamenttagwriter.data.model.Epc256Encoder
 import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.Materials
+import com.blumlaut.filamenttagwriter.data.model.SpoolmanFilament
+import com.blumlaut.filamenttagwriter.data.model.SpoolmanLoader
+import com.blumlaut.filamenttagwriter.data.model.SpoolmanMaterialMapper
 import com.blumlaut.filamenttagwriter.nfc.NfcReaderWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -159,6 +162,84 @@ class FilamentViewModel(private val database: FilamentDatabase) : ViewModel() {
      */
     fun clearNfcWriteResult() {
         nfcWriteResult.value = null
+    }
+
+    /**
+     * Load the SpoolmanDB from assets. Call once at app startup.
+     */
+    fun loadSpoolmanDB(context: android.content.Context) {
+        viewModelScope.launch {
+            SpoolmanLoader.load(context)
+        }
+    }
+
+    /**
+     * Search the SpoolmanDB for filaments matching the query.
+     */
+    fun searchSpoolman(query: String, limit: Int = 20): List<SpoolmanFilament> {
+        return SpoolmanLoader.search(query, limit)
+    }
+
+    /**
+     * Whether the SpoolmanDB loaded successfully.
+     */
+    fun isSpoolmanLoaded(): Boolean = SpoolmanLoader.isLoaded()
+
+    /**
+     * Error message if SpoolmanDB loading failed.
+     */
+    fun getSpoolmanError(): String? = SpoolmanLoader.getError()
+
+    /**
+     * Total number of filaments in SpoolmanDB.
+     */
+    fun getSpoolmanCount(): Int = SpoolmanLoader.count()
+
+    /**
+     * Create a Filament from a SpoolmanDB entry.
+     *
+     * This maps the SpoolmanDB material to the closest ELEGOO equivalent.
+     * If no mapping exists, the user must select material/subtype manually.
+     * The tag encoding always uses ELEGOO codes — SpoolmanDB is reference only.
+     */
+    fun createFilamentFromSpoolman(entry: SpoolmanFilament): Filament {
+        val cal = Calendar.getInstance()
+        val year = cal.get(Calendar.YEAR) % 100
+        val month = cal.get(Calendar.MONTH) + 1
+        val prodRaw = ((year shl 8) or month).toShort()
+
+        // Map SpoolmanDB material to ELEGOO material + subtype
+        val elegooMapping = SpoolmanMaterialMapper.mapToElegoo(entry.material)
+        val (material, subtype) = elegooMapping ?: ("PLA" to "PLA")
+        val subtypeCode = Materials.SUBTYPE_CODES_REVERSE[subtype] ?: 0x0000
+
+        // Use SpoolmanDB temp range if available, fall back to ELEGOO defaults
+        val (minTemp, maxTemp) = entry.extruderTempRange
+            ?.let { (it.first.toShort() to it.second.toShort()) }
+            ?: Materials.getDefaultTemps(material)
+
+        // Parse color hex from SpoolmanDB
+        val colorRgb = entry.colorHex
+            ?.let { hex -> hex.toIntOrNull(16) }
+            ?: 0xFFFFFF
+        val colorHex = entry.colorHex?.let { "#$it" } ?: "#FFFFFF"
+
+        return Filament(
+            id = UUID.randomUUID().toString(),
+            name = "${entry.manufacturer} ${entry.name}",
+            manufacturerCode = 0xEEEEEEEE.toInt(),
+            material = material,
+            subtypeCode = subtypeCode,
+            subtype = subtype,
+            color = colorHex,
+            colorRgb = colorRgb,
+            colorModifier = 0x00,
+            minTemp = minTemp,
+            maxTemp = maxTemp,
+            diameter = entry.diameter.coerceIn(0.1f, 10.0f),
+            weight = entry.weight.toInt().coerceIn(0, 65535),
+            productionDateRaw = prodRaw,
+        )
     }
 
     /**

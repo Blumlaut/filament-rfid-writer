@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -11,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +28,8 @@ import com.blumlaut.filamenttagwriter.data.model.Epc256Encoder
 import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.Materials
 import com.blumlaut.filamenttagwriter.data.model.NameParser
+import com.blumlaut.filamenttagwriter.data.model.SpoolmanLoader
+import com.blumlaut.filamenttagwriter.data.model.SpoolmanMaterialMapper
 
 private val DIAMETERS = listOf(1.75f, 2.85f, 3.0f)
 
@@ -59,6 +64,12 @@ fun FilamentFormScreen(
     var showColorPicker by remember { mutableStateOf(false) }
     var showAutofillBanner by remember { mutableStateOf(false) }
     var nameError by remember { mutableStateOf(false) }
+
+    // SpoolmanDB search
+    var searchQuery by remember { mutableStateOf("") }
+    var showSearchResults by remember { mutableStateOf(false) }
+    var searchResults by remember { mutableStateOf<List<com.blumlaut.filamenttagwriter.data.model.SpoolmanFilament>>(emptyList()) }
+    var showSpoolmanBanner by remember { mutableStateOf(false) }
 
     // Track which fields were explicitly set by the user (not autofilled)
     var materialExplicit by remember { mutableStateOf(editFilament != null) }
@@ -122,6 +133,30 @@ fun FilamentFormScreen(
         }
     }
 
+    // SpoolmanDB search
+    fun onSearchQueryChange(query: String) {
+        searchQuery = query
+        if (query.length >= 2) {
+            searchResults = viewModel.searchSpoolman(query, limit = 15)
+            showSearchResults = true
+        } else {
+            searchResults = emptyList()
+            showSearchResults = false
+        }
+    }
+
+    fun applySpoolmanFilament(entry: com.blumlaut.filamenttagwriter.data.model.SpoolmanFilament) {
+        val newFilament = viewModel.createFilamentFromSpoolman(entry)
+        filament = newFilament
+        materialExplicit = true
+        subtypeExplicit = true
+        colorExplicit = true
+        tempExplicit = true
+        showSpoolmanBanner = true
+        showSearchResults = false
+        searchQuery = ""
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -178,6 +213,126 @@ fun FilamentFormScreen(
                         )
                         TextButton(onClick = { showAutofillBanner = false }) {
                             Text("Dismiss")
+                        }
+                    }
+                }
+            }
+
+            // SpoolmanDB autofill banner
+            if (showSpoolmanBanner) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                    shape = MaterialTheme.shapes.extraLarge,
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column {
+                            Text(
+                                text = "Filled from SpoolmanDB catalog",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            val mapping = SpoolmanMaterialMapper.mapToElegoo(
+                                filament.material
+                            )
+                            if (mapping == null) {
+                                Text(
+                                    text = "Material has no ELEGOO equivalent — check material/subtype",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                        TextButton(onClick = { showSpoolmanBanner = false }) {
+                            Text("Dismiss")
+                        }
+                    }
+                }
+            }
+
+            // SpoolmanDB search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { onSearchQueryChange(it) },
+                label = { Text("Search filament catalog") },
+                placeholder = { Text("e.g. Prusament PLA Silk Red") },
+                shape = MaterialTheme.shapes.extraLarge,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                trailingIcon = {
+                    IconButton(onClick = { onSearchQueryChange(searchQuery) }) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Search",
+                        )
+                    }
+                },
+                supportingText = {
+                    if (SpoolmanLoader.isLoaded()) {
+                        Text("${SpoolmanLoader.count()} filaments available")
+                    } else {
+                        SpoolmanLoader.getError()?.let { err ->
+                            Text("Database unavailable: $err", color = MaterialTheme.colorScheme.error)
+                        } ?: run {
+                            Text("Loading...")
+                        }
+                    }
+                },
+            )
+
+            // Search results dropdown
+            if (showSearchResults && searchResults.isNotEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp),
+                        contentPadding = PaddingValues(4.dp),
+                    ) {
+                        items(searchResults, key = { it.id }) { entry ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { applySpoolmanFilament(entry) }
+                                    .padding(8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "${entry.manufacturer} ${entry.name}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                    Text(
+                                        text = entry.material,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                // Color swatch
+                                entry.colorHex?.let { hex ->
+                                    hex.toIntOrNull(16)?.let { rgb ->
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF000000L or (rgb and 0xFFFFFF).toLong()))
+                                                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

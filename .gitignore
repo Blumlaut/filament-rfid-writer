@@ -20,3 +20,6 @@ local.properties
 
 # Release keystore (never commit)
 app/keystore.jks
+
+# Bundled data (downloaded at build time)
+app/src/main/assets/spoolman/

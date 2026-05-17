@@ -1,3 +1,6 @@
+import java.io.InputStream
+import java.net.URL
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -59,6 +62,46 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+/*
+ * Download SpoolmanDB filaments.json at build time.
+ * This provides a community filament database for autocomplete in the filament form.
+ * The downloaded JSON is bundled as an asset and never touches tag encoding.
+ */
+tasks.register("downloadSpoolmanDB") {
+    val spoolmanDir = layout.projectDirectory.dir("src/main/assets/spoolman")
+    val spoolmanFile = spoolmanDir.file("filaments.json")
+
+    doLast {
+        val dirFile = spoolmanDir.asFile
+        val file = spoolmanFile.asFile
+        dirFile.mkdirs()
+
+        val shouldDownload = !file.exists() ||
+            (System.currentTimeMillis() - file.lastModified()) > 7L * 24 * 60 * 60 * 1000
+
+        if (shouldDownload) {
+            println("Downloading SpoolmanDB filaments.json...")
+            val url = URL("https://donkie.github.io/SpoolmanDB/filaments.json")
+            url.openStream().use { input ->
+                file.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            println("Downloaded ${file.length()} bytes to ${file.path}")
+        } else {
+            println("SpoolmanDB filaments.json is up to date (${file.length()} bytes)")
+        }
+    }
+}
+
+// Hook into preBuild so the DB is available before compilation
+tasks.matching { it.name == "preDebugBuild" }.configureEach {
+    dependsOn("downloadSpoolmanDB")
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn("downloadSpoolmanDB")
 }
 
 dependencies {
