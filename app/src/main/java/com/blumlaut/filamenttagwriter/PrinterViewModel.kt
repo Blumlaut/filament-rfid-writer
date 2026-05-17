@@ -12,6 +12,8 @@ import com.blumlaut.filamenttagwriter.data.model.CanvasMaterialData
 import com.blumlaut.filamenttagwriter.data.model.CanvasTray
 import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.Printer
+import com.blumlaut.filamenttagwriter.data.model.PrinterStatus
+import com.blumlaut.filamenttagwriter.data.model.PrinterAttributes
 import com.blumlaut.filamenttagwriter.network.CanvasWebSocket
 import com.blumlaut.filamenttagwriter.network.ConnectionState
 import kotlinx.coroutines.*
@@ -53,6 +55,16 @@ class PrinterViewModel(private val database: FilamentDatabase) : ViewModel() {
     private val _materialData = mutableStateOf<Map<String, CanvasMaterialData>>(emptyMap())
     val materialData: Map<String, CanvasMaterialData>
         get() = _materialData.value
+
+    // --- Printer status per printer ---
+    private val _printerStatus = mutableStateOf<Map<String, PrinterStatus>>(emptyMap())
+    val printerStatus: Map<String, PrinterStatus>
+        get() = _printerStatus.value
+
+    // --- Printer attributes per printer ---
+    private val _printerAttributes = mutableStateOf<Map<String, PrinterAttributes>>(emptyMap())
+    val printerAttributes: Map<String, PrinterAttributes>
+        get() = _printerAttributes.value
 
     // --- Connection states per printer ---
     private val _connectionStates = mutableStateOf<Map<String, ConnectionState>>(emptyMap())
@@ -201,6 +213,18 @@ class PrinterViewModel(private val database: FilamentDatabase) : ViewModel() {
                         printerDao.insert(it.copy(lastSeen = System.currentTimeMillis()))
                     }
                 }
+            }
+        }
+
+        ws.onPrinterStatus = { status ->
+            _printerStatus.value = _printerStatus.value.toMutableMap().apply {
+                put(printer.id, status)
+            }
+        }
+
+        ws.onPrinterAttributes = { attrs ->
+            _printerAttributes.value = _printerAttributes.value.toMutableMap().apply {
+                put(printer.id, attrs)
             }
         }
 

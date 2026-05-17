@@ -4,6 +4,10 @@ import android.util.Log
 import com.blumlaut.filamenttagwriter.data.model.CanvasMaterialData
 import com.blumlaut.filamenttagwriter.data.model.CanvasTray
 import com.blumlaut.filamenttagwriter.data.model.CanvasUnit
+import com.blumlaut.filamenttagwriter.data.model.PrinterAttributes
+import com.blumlaut.filamenttagwriter.data.model.PrinterStatus
+import com.blumlaut.filamenttagwriter.data.model.PrintInfo
+import com.blumlaut.filamenttagwriter.data.model.DevicesStatus
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -119,6 +123,8 @@ class CanvasWebSocket(private val printerIp: String, private val port: Int = 303
 
     /** Callback for material data received from the printer. */
     var onMaterialData: ((CanvasMaterialData) -> Unit)? = null
+    var onPrinterStatus: ((PrinterStatus) -> Unit)? = null
+    var onPrinterAttributes: ((PrinterAttributes) -> Unit)? = null
     var onConnectionStateChanged: ((ConnectionState) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
 
@@ -168,7 +174,9 @@ class CanvasWebSocket(private val printerIp: String, private val port: Int = 303
                 _connectionState = ConnectionState.Connected
                 onConnectionStateChanged?.invoke(_connectionState)
 
-                // Send initial material data request
+                // Send initial requests for all data
+                requestPrinterStatus()
+                requestPrinterAttributes()
                 requestMaterialData()
 
                 // Start reading loop
@@ -407,35 +415,46 @@ class CanvasWebSocket(private val printerIp: String, private val port: Int = 303
     }
 
     /**
-     * Send Cmd 324 (GET_MATERIAL_DATA) to request CANVAS tray data.
+     * Send Cmd 0 (GET_PRINTER_STATUS) to request printer status.
      */
-    fun requestMaterialData() {
-        if (_connectionState != ConnectionState.Connected) {
-            Log.w(TAG, "Not connected, cannot request material data")
-            return
-        }
-
-        val message = buildMaterialDataRequest()
-        Log.d(TAG, "Sending GET_MATERIAL_DATA")
-        sendFrame(WebSocketFrame.Text(message))
+    fun requestPrinterStatus() {
+        if (_connectionState != ConnectionState.Connected) return
+        sendCommand(0, JSONObject())
     }
 
     /**
-     * Build a Cmd 324 request message.
+     * Send Cmd 1 (GET_PRINTER_ATTR) to request printer attributes.
      */
-    private fun buildMaterialDataRequest(): String {
-        val request = JSONObject().apply {
+    fun requestPrinterAttributes() {
+        if (_connectionState != ConnectionState.Connected) return
+        sendCommand(1, JSONObject())
+    }
+
+    /**
+     * Send Cmd 324 (GET_MATERIAL_DATA) to request CANVAS tray data.
+     */
+    fun requestMaterialData() {
+        if (_connectionState != ConnectionState.Connected) return
+        sendCommand(324, JSONObject())
+    }
+
+    /**
+     * Build and send a command message.
+     */
+    private fun sendCommand(cmd: Int, payload: JSONObject) {
+        val message = JSONObject().apply {
             put("Id", printerId)
             put("Data", JSONObject().apply {
-                put("Cmd", 324)
-                put("Data", JSONObject())
+                put("Cmd", cmd)
+                put("Data", payload)
                 put("RequestID", UUID.randomUUID().toString().replace("-", ""))
                 put("MainboardID", mainboardId)
-                put("TimeStamp", System.currentTimeMillis())
+                put("TimeStamp", System.currentTimeMillis() / 1000)
                 put("From", 1)
             })
         }
-        return request.toString()
+        Log.d(TAG, "Sending Cmd $cmd")
+        sendFrame(WebSocketFrame.Text(message.toString()))
     }
 
     /**
@@ -450,10 +469,38 @@ class CanvasWebSocket(private val printerIp: String, private val port: Int = 303
                 printerId = id
             }
 
-            val data = json.optJSONObject("Data") ?: run {
-                Log.w(TAG, "No Data object in message")
+            // --- Data push messages (no top-level Data.Cmd) ---
+            val topic = json.optString("Topic", "")
+
+            // Status push: sdcp/status/<id>
+            if (topic.startsWith("sdcp/status/")) {
+                val statusObj = json.optJSONObject("Status")
+                if (statusObj != null) {
+                    val parsed = parsePrinterStatus(statusObj)
+                    onPrinterStatus?.invoke(parsed)
+                    Log.d(TAG, "Received printer status: state=${parsed.printState}")
+                }
                 return
             }
+
+            // Attributes push: sdcp/attributes/<id>
+            if (topic.startsWith("sdcp/attributes/")) {
+                val attrObj = json.optJSONObject("Attributes")
+                if (attrObj != null) {
+                    val parsed = parsePrinterAttributes(attrObj)
+                    onPrinterAttributes?.invoke(parsed)
+                    Log.d(TAG, "Received printer attributes: ${parsed.name}")
+                }
+                return
+            }
+
+            // --- Command responses (have top-level Data object) ---
+            val data = json.optJSONObject("Data")
+            if (data == null) {
+                Log.w(TAG, "No Data object and no recognized topic")
+                return
+            }
+
             val mainboardId = data.optString("MainboardID", "")
             if (mainboardId.isNotEmpty() && this.mainboardId.isEmpty()) {
                 this.mainboardId = mainboardId
@@ -464,8 +511,6 @@ class CanvasWebSocket(private val printerIp: String, private val port: Int = 303
             Log.d(TAG, "Message Cmd=$cmd, keys=$keyList")
 
             // Cmd 324 response contains material data
-            // Response structure: {"Data":{"Cmd":324,"Data":{"canvas_list":[...]}}}
-            // The actual tray data is nested inside Data.Data
             val innerData = data.optJSONObject("Data")
             if (cmd == 324 && innerData != null && innerData.has("canvas_list")) {
                 val parsed = parseMaterialData(innerData)
@@ -476,6 +521,96 @@ class CanvasWebSocket(private val printerIp: String, private val port: Int = 303
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse message: $text", e)
         }
+    }
+
+    /**
+     * Parse PrinterStatus from a status push message.
+     */
+    private fun parsePrinterStatus(statusObj: JSONObject): PrinterStatus {
+        val currentStatus = mutableListOf<Int>()
+        val csArray = statusObj.optJSONArray("CurrentStatus")
+        if (csArray != null) {
+            for (i in 0 until csArray.length()) {
+                currentStatus.add(csArray.getInt(i))
+            }
+        }
+
+        val fanObj = statusObj.optJSONObject("CurrentFanSpeed")
+        val printObj = statusObj.optJSONObject("PrintInfo")
+
+        return PrinterStatus(
+            currentStatusCodes = currentStatus,
+            timeLapseStatus = statusObj.optInt("TimeLapseStatus", 0),
+            platformType = statusObj.optInt("PlatFormType", 0),
+            amsConnectStatus = statusObj.optInt("AmsConnectStatus", 0),
+            tempNozzle = statusObj.optDouble("TempOfNozzle", 0.0).toFloat(),
+            tempNozzleTarget = statusObj.optDouble("TempTargetNozzle", 0.0).toFloat(),
+            tempHotbed = statusObj.optDouble("TempOfHotbed", 0.0).toFloat(),
+            tempHotbedTarget = statusObj.optDouble("TempTargetHotbed", 0.0).toFloat(),
+            tempBox = statusObj.optDouble("TempOfBox", 0.0).toFloat(),
+            tempBoxTarget = statusObj.optDouble("TempTargetBox", 0.0).toFloat(),
+            currentCoord = statusObj.optString("CurrenCoord", "0.00,0.00,0.00"),
+            fanModel = fanObj?.optInt("ModelFan", 0) ?: 0,
+            fanAuxiliary = fanObj?.optInt("AuxiliaryFan", 0) ?: 0,
+            fanBox = fanObj?.optInt("BoxFan", 0) ?: 0,
+            zOffset = statusObj.optDouble("ZOffset", 0.0).toFloat(),
+            printInfo = PrintInfo(
+                status = printObj?.optInt("Status", 0) ?: 0,
+                currentLayer = printObj?.optInt("CurrentLayer", 0) ?: 0,
+                totalLayer = printObj?.optInt("TotalLayer", 0) ?: 0,
+                currentTicks = printObj?.optInt("CurrentTicks", 0) ?: 0,
+                totalTicks = printObj?.optInt("TotalTicks", 0) ?: 0,
+                filename = printObj?.optString("Filename", "") ?: "",
+                taskId = printObj?.optString("TaskId", "") ?: "",
+                printSpeedPct = printObj?.optInt("PrintSpeedPct", 100) ?: 100,
+                progress = printObj?.optInt("Progress", 0) ?: 0,
+            ),
+        )
+    }
+
+    /**
+     * Parse PrinterAttributes from an attributes push message.
+     */
+    private fun parsePrinterAttributes(attrObj: JSONObject): PrinterAttributes {
+        val devicesObj = attrObj.optJSONObject("DevicesStatus")
+        val capsArray = attrObj.optJSONArray("Capabilities")
+        val caps = mutableListOf<String>()
+        if (capsArray != null) {
+            for (i in 0 until capsArray.length()) {
+                caps.add(capsArray.getString(i))
+            }
+        }
+        val typesArray = attrObj.optJSONArray("SupportFileType")
+        val types = mutableListOf<String>()
+        if (typesArray != null) {
+            for (i in 0 until typesArray.length()) {
+                types.add(typesArray.getString(i))
+            }
+        }
+
+        return PrinterAttributes(
+            name = attrObj.optString("Name", ""),
+            machineName = attrObj.optString("MachineName", ""),
+            brandName = attrObj.optString("BrandName", ""),
+            protocolVersion = attrObj.optString("ProtocolVersion", ""),
+            firmwareVersion = attrObj.optString("FirmwareVersion", ""),
+            xyzSize = attrObj.optString("XYZsize", ""),
+            mainboardIP = attrObj.optString("MainboardIP", ""),
+            mainboardMAC = attrObj.optString("MainboardMAC", ""),
+            mainboardId = attrObj.optString("MainboardID", ""),
+            networkStatus = attrObj.optString("NetworkStatus", ""),
+            usbDiskStatus = attrObj.optInt("UsbDiskStatus", 0),
+            capabilities = caps,
+            supportFileType = types,
+            cameraStatus = attrObj.optInt("CameraStatus", 0),
+            remainingMemory = attrObj.optLong("RemainingMemory", 0),
+            devicesStatus = DevicesStatus(
+                sgStatus = devicesObj?.optInt("SgStatus", 0) ?: 0,
+                zMotorStatus = devicesObj?.optInt("ZMotorStatus", 0) ?: 0,
+                xMotorStatus = devicesObj?.optInt("XMotorStatus", 0) ?: 0,
+                yMotorStatus = devicesObj?.optInt("YMotorStatus", 0) ?: 0,
+            ),
+        )
     }
 
     /**

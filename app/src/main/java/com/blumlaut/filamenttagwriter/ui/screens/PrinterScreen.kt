@@ -2,7 +2,6 @@ package com.blumlaut.filamenttagwriter.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,6 +25,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.blumlaut.filamenttagwriter.IpValidationState
 import com.blumlaut.filamenttagwriter.PrinterViewModel
 import com.blumlaut.filamenttagwriter.data.model.CanvasTray
+import com.blumlaut.filamenttagwriter.data.model.PrintState
 import com.blumlaut.filamenttagwriter.data.model.Printer
 import com.blumlaut.filamenttagwriter.network.ConnectionState
 import kotlinx.coroutines.delay
@@ -37,6 +37,8 @@ fun PrinterScreen(
 ) {
     val printers by viewModel.printers.collectAsStateWithLifecycle()
     val materialData = viewModel.materialData
+    val printerStatus = viewModel.printerStatus
+    val printerAttributes = viewModel.printerAttributes
     val connectionStates = viewModel.connectionStates
     val importingPrinterId = viewModel.importingPrinterId.value
 
@@ -52,7 +54,6 @@ fun PrinterScreen(
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
-                    // Read fresh state from ViewModel
                     viewModel.autoConnectIfNeeded()
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> {
@@ -102,7 +103,7 @@ fun PrinterScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Add a printer to view its CANVAS AMS filament slots.",
+                    text = "Add a printer to view its status and CANVAS AMS filament slots.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -127,6 +128,8 @@ fun PrinterScreen(
                         printer = printer,
                         connectionState = connectionStates[printer.id],
                         materialData = materialData[printer.id],
+                        printerStatus = printerStatus[printer.id],
+                        printerAttributes = printerAttributes[printer.id],
                         isImporting = importingPrinterId == printer.id,
                         isTrayInCatalog = { tray -> viewModel.isTrayInCatalog(tray) },
                         allCatalogued = viewModel.allTraysInCatalog(printer.id),
@@ -184,6 +187,8 @@ private fun PrinterCard(
     printer: Printer,
     connectionState: ConnectionState?,
     materialData: com.blumlaut.filamenttagwriter.data.model.CanvasMaterialData?,
+    printerStatus: com.blumlaut.filamenttagwriter.data.model.PrinterStatus?,
+    printerAttributes: com.blumlaut.filamenttagwriter.data.model.PrinterAttributes?,
     isImporting: Boolean,
     isTrayInCatalog: (CanvasTray) -> Boolean,
     allCatalogued: Boolean,
@@ -286,6 +291,12 @@ private fun PrinterCard(
                 )
             }
 
+            // Printer status overview (when connected or has recent data)
+            if (printerStatus != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                PrinterStatusOverview(status = printerStatus)
+            }
+
             // Tray grid - always show if we have cached data, or when connected
             if (isConnected || hasCachedData) {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -304,8 +315,189 @@ private fun PrinterCard(
 }
 
 /**
- * 2x2 tray grid matching the printer's CANVAS UI layout.
- * Each slot is a colored circle with slot number and filament type.
+ * Compact printer status overview: state badge, temperatures, print progress.
+ */
+@Composable
+private fun PrinterStatusOverview(
+    status: com.blumlaut.filamenttagwriter.data.model.PrinterStatus,
+) {
+    val printState = status.printState
+    val printInfo = status.printInfo
+
+    // State color
+    val stateColor = when (printState) {
+        PrintState.Printing -> MaterialTheme.colorScheme.primary
+        PrintState.Paused, PrintState.PausedAlt -> MaterialTheme.colorScheme.tertiary
+        PrintState.Done -> MaterialTheme.colorScheme.secondary
+        PrintState.Error -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    // State icon
+    val stateIcon = when (printState) {
+        PrintState.Printing -> Icons.Filled.PlayArrow
+        PrintState.Paused, PrintState.PausedAlt -> Icons.Filled.Pause
+        PrintState.Done -> Icons.Filled.CheckCircle
+        PrintState.Error -> Icons.Filled.Error
+        else -> Icons.Filled.Circle
+    }
+
+    // State label
+    val stateLabel = when (printState) {
+        PrintState.Printing -> "Printing"
+        PrintState.Paused, PrintState.PausedAlt -> "Paused"
+        PrintState.Done -> "Done"
+        PrintState.Error -> "Error"
+        else -> if (status.isHeating) "Heating" else "Idle"
+    }
+
+    // Surface container for the status section
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Top row: state badge + temperatures
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // State badge
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    // Animated state dot
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(stateColor),
+                    )
+                    Text(
+                        text = stateLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = stateColor,
+                    )
+                }
+
+                // Temperature pills
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TempPill(
+                        icon = Icons.Filled.LocalFireDepartment,
+                        current = status.tempNozzle,
+                        target = status.tempNozzleTarget,
+                        label = "Nozzle",
+                    )
+                    TempPill(
+                        icon = Icons.Filled.GridOn,
+                        current = status.tempHotbed,
+                        target = status.tempHotbedTarget,
+                        label = "Bed",
+                    )
+                }
+            }
+
+            // Print progress (only when there's a job)
+            if (printInfo.hasJob) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Filename
+                Text(
+                    text = printInfo.filename.takeLastWhile { it != '/' },
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                // Progress bar
+                if (printInfo.progress > 0 || printState == PrintState.Printing) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { printInfo.progress.toFloat() / 100f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(MaterialTheme.shapes.extraSmall),
+                        color = stateColor,
+                        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    )
+                }
+
+                // Details row: layers + progress %
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = if (printInfo.totalLayer > 0) {
+                            "Layer ${printInfo.currentLayer}/${printInfo.totalLayer}"
+                        } else {
+                            "—"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "${printInfo.progress}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TempPill(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    current: Float,
+    target: Float,
+    label: String,
+) {
+    val isHeating = target > 0f
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.size(14.dp),
+            tint = if (isHeating) MaterialTheme.colorScheme.errorContainer
+                   else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Column {
+            Text(
+                text = "${current.toInt()}°",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (isHeating) {
+                Text(
+                    text = "/ ${target.toInt()}°",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 2x2 tray grid matching the printer's CANVAS AMS layout.
  */
 @Composable
 private fun CanvasTrayGrid(
@@ -320,12 +512,11 @@ private fun CanvasTrayGrid(
     val trays = materialData?.allTrays ?: emptyList()
     val activeTrayId = materialData?.activeTrayId ?: -1
 
-    // Ensure we always show 4 slots (some printers may have more, but 2x2 is standard)
     val slotCount = 4
     val traysMap = trays.associateBy { it.trayId }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Import all button - only show if there are uncatalogued filaments
+        // Import all button
         if (!allCatalogued) {
             FilledTonalButton(
                 onClick = onImportAll,
@@ -345,7 +536,7 @@ private fun CanvasTrayGrid(
             }
         }
 
-        // 2x2 grid of tray slots
+        // 2x2 grid
         Grid2x2TrayDisplay(
             slotCount = slotCount,
             traysMap = traysMap,
@@ -354,7 +545,7 @@ private fun CanvasTrayGrid(
             onImportTray = onImportTray,
         )
 
-        // Refreshing indicator
+        // Status indicator
         if (!isConnected) {
             Row(
                 modifier = Modifier.padding(top = 4.dp),
@@ -376,10 +567,6 @@ private fun CanvasTrayGrid(
     }
 }
 
-/**
- * 2x2 grid displaying CANVAS tray slots as colored circles.
- * Inspired by the ELEGOO Centauri Carbon printer UI.
- */
 @Composable
 private fun Grid2x2TrayDisplay(
     slotCount: Int,
@@ -388,7 +575,6 @@ private fun Grid2x2TrayDisplay(
     isTrayInCatalog: (CanvasTray) -> Boolean,
     onImportTray: (CanvasTray) -> Unit,
 ) {
-    // Build a list of 4 slots (2x2)
     val slots = (0 until slotCount).map { index ->
         traysMap[index] ?: CanvasTray(
             trayId = index,
@@ -409,7 +595,7 @@ private fun Grid2x2TrayDisplay(
             slots.getOrNull(0)?.let { TraySlot(tray = it, isActive = it.trayId == activeTrayId, isInCatalog = isTrayInCatalog(it), onImport = onImportTray) }
             slots.getOrNull(1)?.let { TraySlot(tray = it, isActive = it.trayId == activeTrayId, isInCatalog = isTrayInCatalog(it), onImport = onImportTray) }
         }
-        // Right column (slots 4, 3 — matching printer UI layout)
+        // Right column (slots 4, 3)
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f),
@@ -420,9 +606,6 @@ private fun Grid2x2TrayDisplay(
     }
 }
 
-/**
- * Single tray slot: colored circle with slot number badge and filament info.
- */
 @Composable
 private fun TraySlot(
     tray: CanvasTray,
@@ -442,7 +625,7 @@ private fun TraySlot(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        // Slot number badge (like printer UI: small grey circle with number)
+        // Slot number badge
         MaterialTheme(
             colorScheme = MaterialTheme.colorScheme.copy(
                 primary = MaterialTheme.colorScheme.outlineVariant,
@@ -482,7 +665,6 @@ private fun TraySlot(
             contentAlignment = Alignment.Center,
         ) {
             if (tray.hasFilament) {
-                // Active tray indicator (darker center ring, like printer UI)
                 if (isActive) {
                     Box(
                         modifier = Modifier
@@ -491,7 +673,6 @@ private fun TraySlot(
                             .background(Color.Black.copy(alpha = 0.25f)),
                     )
                 }
-                // Filament type label
                 Text(
                     text = tray.filamentType.take(6),
                     style = MaterialTheme.typography.labelSmall,
@@ -499,7 +680,6 @@ private fun TraySlot(
                     fontWeight = FontWeight.Bold,
                 )
             } else {
-                // Empty slot icon
                 Icon(
                     Icons.Filled.Circle,
                     contentDescription = "Empty",
@@ -547,9 +727,7 @@ private fun TraySlot(
                         )
                     }
                 }
-                // Import button or catalogued badge
                 if (isInCatalog) {
-                    // M3 Expressive: extraLarge pill shape matching printer card
                     Surface(
                         shape = MaterialTheme.shapes.extraLarge,
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
@@ -575,7 +753,6 @@ private fun TraySlot(
                         }
                     }
                 } else {
-                    // M3 Expressive: CircleShape for FABs and action buttons
                     FilledIconButton(
                         onClick = { onImport(tray) },
                         shape = CircleShape,
@@ -626,7 +803,6 @@ fun AddPrinterDialog(
     var ip by remember { mutableStateOf("") }
     var port by remember { mutableStateOf("3030") }
 
-    // Debounced IP validation — wait 800ms after typing stops
     LaunchedEffect(ip) {
         if (ip.isNotBlank()) {
             delay(800)
@@ -652,7 +828,6 @@ fun AddPrinterDialog(
                     .padding(4.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // Printer name
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -666,7 +841,6 @@ fun AddPrinterDialog(
                     },
                 )
 
-                // IP address with validation indicator
                 OutlinedTextField(
                     value = ip,
                     onValueChange = { ip = it },
@@ -700,7 +874,6 @@ fun AddPrinterDialog(
                     ),
                 )
 
-                // Port
                 OutlinedTextField(
                     value = port,
                     onValueChange = { port = it.filter { c -> c.isDigit() } },
