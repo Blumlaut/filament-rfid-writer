@@ -53,6 +53,9 @@ object SpoolmanLoader {
     /**
      * Search filaments by query string. Matches against manufacturer, name, and material.
      * Returns at most [limit] results, sorted by relevance (exact prefix matches first).
+     *
+     * Results are deduplicated by (manufacturer, name, material) so that the same filament
+     * listed at different spool weights (e.g. 1 kg vs 2 kg) appears only once.
      */
     fun search(query: String, limit: Int = 20): List<SpoolmanFilament> {
         val data = filaments ?: return emptyList()
@@ -68,7 +71,11 @@ object SpoolmanLoader {
                 filament to score
             }
             .filter { it.second > 0 }
-            .sortedByDescending { it.second }
+            // Sort by relevance, then prefer entries closest to 1 kg (industry standard)
+            .sortedWith(compareByDescending<Pair<SpoolmanFilament, Int>> { it.second }
+                .thenBy { kotlin.math.abs(it.first.weight - 1000f) }
+            )
+            .distinctBy { it.first.let { f -> f.manufacturer to f.name to f.material } }
             .take(limit)
             .map { it.first }
     }
