@@ -56,9 +56,10 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: >
-          ./gradlew :app:assembleRelease :app:bundleRelease
+          ./gradlew
           -PversionName=${{ steps.version.outputs.name }}
           -PversionCode=${{ steps.version.outputs.code }}
+          :app:assembleRelease :app:bundleRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
