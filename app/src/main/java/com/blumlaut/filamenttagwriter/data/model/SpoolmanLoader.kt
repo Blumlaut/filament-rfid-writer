@@ -108,6 +108,79 @@ object SpoolmanLoader {
     fun count(): Int = filaments?.size ?: 0
 
     /**
+     * Try to match a scanned filament (from tag data) against the SpoolmanDB catalog.
+     *
+     * Matching strategy:
+     * 1. Map ELEGOO material/subtype → set of SpoolmanDB material names
+     * 2. Filter by material
+     * 3. Filter by color with tolerance (RGB Euclidean distance ≤ threshold)
+     * 4. Sort by color proximity
+     *
+     * Returns a sealed result:
+     * - ExactMatch: single best match (color within tight threshold)
+     * - MultipleMatches: several candidates (user should pick)
+     * - NoMatch: nothing close enough
+     */
+    sealed interface SpoolmanMatchResult {
+        object NoMatch : SpoolmanMatchResult
+        data class ExactMatch(val filament: SpoolmanFilament) : SpoolmanMatchResult
+        data class MultipleMatches(val candidates: List<SpoolmanFilament>) : SpoolmanMatchResult
+    }
+
+    /**
+     * RGB Euclidean distance between two colors. 0 = identical, ~441 = max (complementary).
+     */
+    private fun rgbDistance(r1: Int, g1: Int, b1: Int, r2: Int, g2: Int, b2: Int): Int {
+        val dr = r1 - r2
+        val dg = g1 - g2
+        val db = b1 - b2
+        return dr * dr + dg * dg + db * db
+    }
+
+    fun matchByTagData(
+        elegooMaterial: String,
+        elegooSubtype: String,
+        colorRgb: Int,
+        tolerance: Int = 2500, // ~50 per channel squared sum
+    ): SpoolmanMatchResult {
+        val data = filaments ?: return SpoolmanMatchResult.NoMatch
+
+        // Map ELEGOO material/subtype → SpoolmanDB material names
+        val spoolmanMaterials = SpoolmanMaterialMapper.mapToSpoolman(elegooMaterial, elegooSubtype)
+        if (spoolmanMaterials.isEmpty()) {
+            return SpoolmanMatchResult.NoMatch
+        }
+
+        val cr = (colorRgb shr 16) and 0xFF
+        val cg = (colorRgb shr 8) and 0xFF
+        val cb = colorRgb and 0xFF
+
+        // Filter by material + color proximity
+        val candidates = data
+            .filter { spoolmanMaterials.contains(it.material) }
+            .filterNotNull()
+            .mapNotNull { entry ->
+                entry.colorHex?.toIntOrNull(16)?.let { hex ->
+                    val er = (hex shr 16) and 0xFF
+                    val eg = (hex shr 8) and 0xFF
+                    val eb = hex and 0xFF
+                    val dist = rgbDistance(cr, cg, cb, er, eg, eb)
+                    entry to dist
+                }
+            }
+            .filter { it.second <= tolerance }
+            .sortedBy { it.second }
+
+        val matched = candidates.map { it.first }
+
+        return when {
+            matched.size == 1 -> SpoolmanMatchResult.ExactMatch(matched[0])
+            matched.isNotEmpty() -> SpoolmanMatchResult.MultipleMatches(matched.take(10))
+            else -> SpoolmanMatchResult.NoMatch
+        }
+    }
+
+    /**
      * Whether the database loaded successfully.
      */
     fun isLoaded(): Boolean = filaments != null

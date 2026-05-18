@@ -54,6 +54,30 @@ object SpoolmanMaterialMapper {
     fun hasElegooEquivalent(spoolmanMaterial: String): Boolean = MATERIAL_MAP.containsKey(spoolmanMaterial)
 
     /**
+     * Reverse mapping: given an ELEGOO (material, subtype) pair, returns the set of
+     * SpoolmanDB material names that map to it.
+     *
+     * Used when matching a scanned tag back to SpoolmanDB entries.
+     */
+    fun mapToSpoolman(elegooMaterial: String, elegooSubtype: String): Set<String> {
+        val matches = mutableSetOf<String>()
+        for ((spoolmanMat, elegooPair) in MATERIAL_MAP) {
+            if (elegooPair.first == elegooMaterial && elegooPair.second == elegooSubtype) {
+                matches.add(spoolmanMat)
+            }
+        }
+        // If exact subtype match yields nothing, fall back to material-family-only match
+        if (matches.isEmpty()) {
+            for ((spoolmanMat, elegooPair) in MATERIAL_MAP) {
+                if (elegooPair.first == elegooMaterial) {
+                    matches.add(spoolmanMat)
+                }
+            }
+        }
+        return matches
+    }
+
+    /**
      * Full mapping table: SpoolmanDB material → (ELEGOO material family, ELEGOO subtype).
      *
      * ELEGOO material family determines the 32-bit material code on the tag.

@@ -13,6 +13,7 @@ import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.Materials
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanFilament
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanLoader
+import com.blumlaut.filamenttagwriter.data.model.SpoolmanLoader.SpoolmanMatchResult
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanMaterialMapper
 import com.blumlaut.filamenttagwriter.nfc.NfcReaderWriter
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +50,12 @@ class FilamentViewModel(private val database: FilamentDatabase) : ViewModel() {
 
     /** Whether an NFC read is in progress. */
     var isReadingTag: MutableState<Boolean> = mutableStateOf(false)
+
+    /**
+     * SpoolmanDB match result for the last scanned filament.
+     * Populated automatically after a successful tag read.
+     */
+    var spoolmanMatchResult: MutableState<SpoolmanMatchResult?> = mutableStateOf(null)
 
     /** Current bottom-nav tab. Used to route NFC intents intelligently. */
     var currentTab: MutableState<String> = mutableStateOf("read")
@@ -89,9 +96,11 @@ class FilamentViewModel(private val database: FilamentDatabase) : ViewModel() {
 
     /**
      * Read filament data from a tag on a background thread.
+     * After a successful read, attempts to match against SpoolmanDB.
      */
     fun readTag(tag: Tag) {
         nfcReadResult.value = null
+        spoolmanMatchResult.value = null
         isReadingTag.value = true
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
@@ -100,6 +109,20 @@ class FilamentViewModel(private val database: FilamentDatabase) : ViewModel() {
             nfcReadResult.value = result
             isReadingTag.value = false
             Log.d("FilamentViewModel", "Read complete: ${result::class.simpleName}")
+
+            // If read succeeded, try matching against SpoolmanDB
+            if (result is NfcReaderWriter.ReadResult.Success) {
+                val f = result.filament
+                val match = withContext(Dispatchers.IO) {
+                    SpoolmanLoader.matchByTagData(
+                        elegooMaterial = f.material,
+                        elegooSubtype = f.subtype,
+                        colorRgb = f.colorRgb,
+                    )
+                }
+                spoolmanMatchResult.value = match
+                Log.d("FilamentViewModel", "Spoolman match: ${match::class.simpleName}")
+            }
         }
     }
 
@@ -108,6 +131,29 @@ class FilamentViewModel(private val database: FilamentDatabase) : ViewModel() {
      */
     fun clearNfcReadResult() {
         nfcReadResult.value = null
+        spoolmanMatchResult.value = null
+    }
+
+    /**
+     * Apply a SpoolmanDB match to the current read filament.
+     * Replaces the name with the SpoolmanDB entry name.
+     * Returns the updated filament (caller should update nfcReadResult).
+     */
+    fun applySpoolmanMatch(entry: SpoolmanFilament): Filament? {
+        val current = (nfcReadResult.value as? NfcReaderWriter.ReadResult.Success)?.filament ?: return null
+        val fromSpoolman = createFilamentFromSpoolman(entry)
+        // Keep the tag-scanned values for fields not in SpoolmanDB,
+        // but use SpoolmanDB name and any better temp/color data
+        return current.copy(
+            name = fromSpoolman.name,
+        )
+    }
+
+    /**
+     * Check if the current scanned filament is already in the local catalog.
+     */
+    fun isAlreadyInCatalog(filament: Filament): Boolean {
+        return _catalog.value.any { it.name == filament.name && it.material == filament.material }
     }
 
     /**
@@ -264,7 +310,7 @@ class FilamentViewModel(private val database: FilamentDatabase) : ViewModel() {
             maxTemp = 230,
             diameter = 1.75f,
             weight = 1000,
-            productionDateRaw = prodRaw.toShort(),
+            productionDateRaw = prodRaw,
         )
     }
 

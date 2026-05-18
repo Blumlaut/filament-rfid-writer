@@ -175,8 +175,19 @@ object Epc256Encoder {
         // 0x60-0x61: Production Date (if present)
         val productionDateRaw = if (data.size > 34) u16(32).toShort() else 0
 
+        val name = synthesizeName(
+            Filament(
+                manufacturerCode = manufacturerCode,
+                material = material,
+                subtypeCode = subtypeCode,
+                subtype = subtype,
+                colorRgb = colorRgb,
+            )
+        )
+
         return Filament(
             manufacturerCode = manufacturerCode,
+            name = name,
             material = material,
             subtypeCode = subtypeCode,
             subtype = subtype,
@@ -223,5 +234,95 @@ object Epc256Encoder {
 
     fun rgbToHex(rgb: Int): String {
         return String.format("#%06X", rgb and 0xFFFFFF)
+    }
+
+    /**
+     * Synthesize a human-friendly name from a decoded Filament.
+     * Format: "Red PLA", "Carbon Fiber PETG", "Matte Black ABS", etc.
+     *
+     * Uses the subtype if it adds info beyond the material (e.g. "PLA-CF" → "Carbon Fiber PLA"),
+     * otherwise just the material. Prepends color name when recognizable.
+     */
+    fun synthesizeName(filament: Filament): String {
+        val colorName = rgbToColorName(filament.colorRgb)
+        val typeLabel = subtypeToNameLabel(filament.material, filament.subtype)
+        return if (colorName != null) {
+            "$colorName $typeLabel"
+        } else {
+            typeLabel
+        }
+    }
+
+    /**
+     * Map subtype to a descriptive label. If subtype == material, just use material.
+     * Otherwise extract the modifier (e.g. "PLA-CF" → "Carbon Fiber PLA").
+     */
+    private fun subtypeToNameLabel(material: String, subtype: String): String {
+        if (subtype == material) return material
+
+        // Handle known subtype patterns
+        val base = subtype.removePrefix(material).trimStart('-', '+')
+        return when {
+            subtype.contains("CF", ignoreCase = true) -> "Carbon Fiber $material"
+            subtype.contains("GF", ignoreCase = true) -> "Glass Fiber $material"
+            subtype.contains("Silk", ignoreCase = true) -> "Silk $material"
+            subtype.contains("Matte", ignoreCase = true) -> "Matte $material"
+            subtype.contains("Wood", ignoreCase = true) -> "Wood $material"
+            subtype.contains("Marble", ignoreCase = true) -> "Marble $material"
+            subtype.contains("Galaxy", ignoreCase = true) -> "Galaxy $material"
+            subtype.contains("Sparkle", ignoreCase = true) -> "Sparkle $material"
+            subtype.contains("Fluo", ignoreCase = true) -> "Fluorescent $material"
+            subtype.contains("Pro", ignoreCase = true) -> "$material Pro"
+            subtype.contains("Translucent", ignoreCase = true) -> "Translucent $material"
+            subtype.contains("Copper", ignoreCase = true) -> "Copper $material"
+            base.isNotEmpty() -> "$base $material"
+            else -> material
+        }
+    }
+
+    /**
+     * Map RGB to a color name if it's close to a well-known color.
+     * Returns null for colors that don't match any preset (use hex instead).
+     */
+    private fun rgbToColorName(rgb: Int): String? {
+        val r = (rgb shr 16) and 0xFF
+        val g = (rgb shr 8) and 0xFF
+        val b = rgb and 0xFF
+
+        // Check against known colors with tolerance
+        val knownColors = listOf(
+            "Black" to 0x000000,
+            "White" to 0xFFFFFF,
+            "Red" to 0xFF0000,
+            "Green" to 0x00FF00,
+            "Blue" to 0x0000FF,
+            "Yellow" to 0xFFFF00,
+            "Orange" to 0xFF8000,
+            "Purple" to 0x800080,
+            "Pink" to 0xFF69B4,
+            "Cyan" to 0x00FFFF,
+            "Brown" to 0x8B4513,
+            "Gray" to 0x808080,
+            "Grey" to 0x808080,
+        )
+
+        var bestName: String? = null
+        var bestDist = 15000 // tolerance threshold (~55 per channel)
+
+        for ((name, target) in knownColors) {
+            val tr = (target shr 16) and 0xFF
+            val tg = (target shr 8) and 0xFF
+            val tb = target and 0xFF
+            val dr = r - tr
+            val dg = g - tg
+            val db = b - tb
+            val dist = dr * dr + dg * dg + db * db
+            if (dist < bestDist) {
+                bestDist = dist
+                bestName = name
+            }
+        }
+
+        return bestName
     }
 }

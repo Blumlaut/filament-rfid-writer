@@ -1,10 +1,17 @@
 package com.blumlaut.filamenttagwriter.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowRight
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.blumlaut.filamenttagwriter.FilamentViewModel
 import com.blumlaut.filamenttagwriter.data.model.Filament
+import com.blumlaut.filamenttagwriter.data.model.SpoolmanLoader
 import com.blumlaut.filamenttagwriter.nfc.NfcReaderWriter
 import java.util.UUID
 
@@ -27,6 +35,7 @@ fun ReadScreen(
 ) {
     val readResult = viewModel.nfcReadResult.value
     val isReading = viewModel.isReadingTag.value
+    val spoolmanMatch = viewModel.spoolmanMatchResult.value
 
     Scaffold(
         topBar = {
@@ -80,14 +89,33 @@ fun ReadScreen(
 
             when (readResult) {
                 is NfcReaderWriter.ReadResult.Success -> {
-                    val filament = (readResult as NfcReaderWriter.ReadResult.Success).filament
+                    val filament = readResult.filament
+
+                    // SpoolmanDB match banner
+                    SpoolmanMatchBanner(
+                        match = spoolmanMatch,
+                        filament = filament,
+                        onApplyMatch = { entry ->
+                            val updated = viewModel.applySpoolmanMatch(entry)
+                            if (updated != null) {
+                                // Update the read result with the matched name
+                                viewModel.nfcReadResult.value = NfcReaderWriter.ReadResult.Success(updated)
+                                viewModel.spoolmanMatchResult.value = null
+                            }
+                        },
+                        onSearchCatalog = {
+                            // Navigate to form with pre-filled data — handled by caller
+                            // For now just clear match to show search hint
+                            viewModel.spoolmanMatchResult.value = null
+                        },
+                    )
+
                     FilamentInfoCard(filament = filament)
 
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        // M3 Expressive: extraLarge shape + emphasized title
                         FilledTonalButton(
                             onClick = {
                                 val saved = filament.copy(id = UUID.randomUUID().toString())
@@ -126,7 +154,7 @@ fun ReadScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = (readResult as NfcReaderWriter.ReadResult.Error).message,
+                                text = readResult.message,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                             )
                         }
@@ -146,9 +174,217 @@ fun ReadScreen(
     }
 }
 
+/**
+ * Banner shown after a successful tag read, offering SpoolmanDB match results.
+ *
+ * M3 Expressive patterns:
+ * - Cards use extraLarge shape (28dp) with semantic container colors
+ * - Candidate rows are ElevatedCards with large shape (16dp)
+ * - Color swatches use CircleShape with semantic outline border
+ * - Actions use FilledTonalButton / FilledIconButton
+ * - Typography uses bodyLarge for titles, labelMedium for captions
+ */
+@Composable
+private fun SpoolmanMatchBanner(
+    match: SpoolmanLoader.SpoolmanMatchResult?,
+    filament: Filament,
+    onApplyMatch: (com.blumlaut.filamenttagwriter.data.model.SpoolmanFilament) -> Unit,
+    onSearchCatalog: () -> Unit,
+) {
+    when (match) {
+        is SpoolmanLoader.SpoolmanMatchResult.ExactMatch -> {
+            // M3 Expressive: tertiaryContainer card, extraLarge shape, emphasized action
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                ),
+                shape = MaterialTheme.shapes.extraLarge,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text(
+                            text = "Found in catalog",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                        Text(
+                            text = "${match.filament.manufacturer} ${match.filament.name}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+                    FilledTonalButton(
+                        onClick = { onApplyMatch(match.filament) },
+                        shape = MaterialTheme.shapes.extraLarge,
+                    ) {
+                        Text("Use Name")
+                    }
+                }
+            }
+        }
+
+        is SpoolmanLoader.SpoolmanMatchResult.MultipleMatches -> {
+            // M3 Expressive: secondaryContainer card, extraLarge shape
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                ),
+                shape = MaterialTheme.shapes.extraLarge,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    // Header
+                    Text(
+                        text = "${match.candidates.size} possible matches",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Candidate list — each item is an ElevatedCard (M3 Expressive: large shape)
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 200.dp),
+                        contentPadding = PaddingValues(bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(match.candidates, key = { it.id }) { entry ->
+                            SpoolmanCandidateCard(
+                                entry = entry,
+                                onUse = { onApplyMatch(entry) },
+                            )
+                        }
+                    }
+
+                    // Search button — M3 Expressive: text button with icon
+                    TextButton(
+                        onClick = onSearchCatalog,
+                        shape = MaterialTheme.shapes.extraLarge,
+                        modifier = Modifier.align(Alignment.End),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Search for exact brand")
+                    }
+                }
+            }
+        }
+
+        is SpoolmanLoader.SpoolmanMatchResult.NoMatch -> {
+            // Only show hint if SpoolmanDB is loaded
+            if (SpoolmanLoader.isLoaded()) {
+                // M3 Expressive: subtle OutlinedCard, extraLarge shape
+                OutlinedCard(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    ) {
+                        Text(
+                            text = "No catalog match — name is auto-generated",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        FilledTonalButton(
+                            onClick = onSearchCatalog,
+                            shape = MaterialTheme.shapes.extraLarge,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Search")
+                        }
+                    }
+                }
+            }
+        }
+
+        null -> {}
+    }
+}
+
+/**
+ * Single candidate in the match banner.
+ *
+ * M3 Expressive: ElevatedCard bubble with rounded shape (not CutCornerShape),
+ * CircleShape swatch with outline border, FilledIconButton with checkmark.
+ */
+@Composable
+private fun SpoolmanCandidateCard(
+    entry: com.blumlaut.filamenttagwriter.data.model.SpoolmanFilament,
+    onUse: () -> Unit,
+) {
+    ElevatedCard(
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+        ) {
+            // Color swatch — M3 Expressive: CircleShape with semantic outline border
+            entry.colorHex?.let { hex ->
+                hex.toIntOrNull(16)?.let { rgb ->
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF000000L or (rgb and 0xFFFFFF).toLong()))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                    )
+                }
+            }
+
+            // Text content
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${entry.manufacturer} ${entry.name}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = entry.material,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            // Action — M3 Expressive: round FilledIconButton
+            FilledIconButton(onClick = onUse) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowRight,
+                    contentDescription = "Use this name",
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun FilamentInfoCard(filament: Filament) {
-    // M3 Expressive: extraLarge shape, circular swatch, emphasized title
     Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
