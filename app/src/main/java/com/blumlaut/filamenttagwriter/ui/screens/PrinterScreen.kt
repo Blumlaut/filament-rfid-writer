@@ -29,11 +29,14 @@ import com.blumlaut.filamenttagwriter.data.model.PrintState
 import com.blumlaut.filamenttagwriter.data.model.Printer
 import com.blumlaut.filamenttagwriter.network.ConnectionState
 import com.blumlaut.filamenttagwriter.ui.components.ColorSwatch
+import com.blumlaut.filamenttagwriter.ui.components.PulsingSkeleton
+import com.blumlaut.filamenttagwriter.ui.components.PrinterCardSkeleton
+import com.blumlaut.filamenttagwriter.ui.components.SkeletonSurfaceContainer
 import com.blumlaut.filamenttagwriter.ui.components.isLightColor
 import com.blumlaut.filamenttagwriter.ui.components.parseHexColor
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PrinterScreen(
     viewModel: PrinterViewModel,
@@ -44,6 +47,13 @@ fun PrinterScreen(
     val printerAttributes = viewModel.printerAttributes
     val connectionStates = viewModel.connectionStates
     val importingPrinterId = viewModel.importingPrinterId.value
+
+    // Track whether first emission has arrived (Room DB query completed)
+    var hasLoaded by remember { mutableStateOf(false) }
+    LaunchedEffect(printers) {
+        hasLoaded = true
+    }
+    val isLoading = !hasLoaded
 
     var showAddDialog by remember { mutableStateOf(false) }
     var deleteCandidate by remember { mutableStateOf<Printer?>(null) }
@@ -83,7 +93,18 @@ fun PrinterScreen(
             )
         },
     ) { padding ->
-        if (printers.isEmpty()) {
+        if (isLoading) {
+            // M3 Expressive: skeleton loaders during initial load
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                items(2) { index ->
+                    PrinterCardSkeleton(staggerIndex = index)
+                }
+            }
+        } else if (printers.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -185,6 +206,7 @@ fun PrinterScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun PrinterCard(
     printer: Printer,
@@ -274,34 +296,34 @@ private fun PrinterCard(
                 }
             }
 
-            // Connection status text
-            if (isConnecting) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
+            // Show skeleton whenever there's no data to display.
+            // Show real content only when both status and material data are present.
+            val hasData = hasCachedData || (printerStatus != null && materialData != null)
+
+            if (!hasData) {
+                if (connectionState is ConnectionState.Error) {
                     Text(
-                        text = "Connecting...",
+                        text = "Error: ${connectionState.message}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp),
                     )
                 }
-            } else if (connectionState is ConnectionState.Error && !hasCachedData) {
-                Text(
-                    text = "Error: ${connectionState.message}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
-
-            // Printer status overview (when connected or has recent data)
-            if (printerStatus != null) {
+                // Status overview skeleton
                 Spacer(modifier = Modifier.height(12.dp))
-                PrinterStatusOverview(status = printerStatus)
-            }
+                PrinterStatusSkeleton()
 
-            // Tray grid - always show if we have cached data, or when connected
-            if (isConnected || hasCachedData) {
+                // Tray grid skeleton
+                Spacer(modifier = Modifier.height(12.dp))
+                TrayGridSkeleton()
+            } else {
+                // Printer status overview
+                printerStatus?.let {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    PrinterStatusOverview(status = it)
+                }
+
+                // Tray grid
                 Spacer(modifier = Modifier.height(12.dp))
                 CanvasTrayGrid(
                     materialData = materialData,
@@ -345,10 +367,10 @@ private fun PrinterStatusOverview(
         else -> if (status.isHeating) "Heating" else "Idle"
     }
 
-    // Surface container for the status section
+    // M3 Expressive: use surface container color instead of tonalElevation
     Surface(
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -493,6 +515,7 @@ private fun TempPill(
 /**
  * 2x2 tray grid matching the printer's CANVAS AMS layout.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CanvasTrayGrid(
     materialData: com.blumlaut.filamenttagwriter.data.model.CanvasMaterialData?,
@@ -519,9 +542,8 @@ private fun CanvasTrayGrid(
                 enabled = !isImporting && isConnected,
             ) {
                 if (isImporting) {
-                    CircularProgressIndicator(
+                    LoadingIndicator(
                         modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -545,9 +567,8 @@ private fun CanvasTrayGrid(
                 modifier = Modifier.padding(top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CircularProgressIndicator(
+                LoadingIndicator(
                     modifier = Modifier.size(12.dp),
-                    strokeWidth = 1.5.dp,
                     color = MaterialTheme.colorScheme.outlineVariant,
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -561,6 +582,7 @@ private fun CanvasTrayGrid(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun Grid2x2TrayDisplay(
     slotCount: Int,
@@ -782,9 +804,53 @@ private fun TraySlot(
     }
 }
 
+/**
+ * Skeleton for the printer status overview surface.
+ * Matches the shape and approximate height of [PrinterStatusOverview].
+ */
+@Composable
+private fun PrinterStatusSkeleton() {
+    SkeletonSurfaceContainer(
+        modifier = Modifier.fillMaxWidth().height(80.dp),
+        staggerIndex = 0,
+    )
+}
 
+/**
+ * Skeleton for the 2x2 tray grid area.
+ * Matches the layout of [CanvasTrayGrid] (import button + 2x2 grid).
+ */
+@Composable
+private fun TrayGridSkeleton() {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Import all button
+        PulsingSkeleton(
+            modifier = Modifier.fillMaxWidth().height(40.dp),
+            staggerIndex = 1,
+        )
+        // 2x2 tray grid
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(2) {
+                    PulsingSkeleton(
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        staggerIndex = 2 + it * 2,
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(2) {
+                    PulsingSkeleton(
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        staggerIndex = 3 + it * 2,
+                    )
+                }
+            }
+        }
+    }
+}
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AddPrinterDialog(
     viewModel: PrinterViewModel,
@@ -850,7 +916,7 @@ fun AddPrinterDialog(
                     },
                     leadingIcon = {
                         when {
-                            isValidating -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            isValidating -> LoadingIndicator(modifier = Modifier.size(18.dp))
                             isValid -> Icon(
                                 Icons.Filled.CheckCircle,
                                 contentDescription = "Valid",

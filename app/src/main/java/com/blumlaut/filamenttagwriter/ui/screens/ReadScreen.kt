@@ -1,7 +1,6 @@
 package com.blumlaut.filamenttagwriter.ui.screens
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,7 +28,7 @@ import com.blumlaut.filamenttagwriter.ui.components.NfcStatusCard
 import com.blumlaut.filamenttagwriter.ui.components.parseHexColor
 import java.util.UUID
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ReadScreen(
     viewModel: FilamentViewModel,
@@ -58,7 +57,7 @@ fun ReadScreen(
                 NfcStatusCard(nfcAvailable = nfcAvailable, nfcEnabled = nfcEnabled)
             } else {
                 if (isReading) {
-                    CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                    LoadingIndicator(modifier = Modifier.size(48.dp))
                     Text("Reading tag...")
                 } else if (readResult == null) {
                     Text(

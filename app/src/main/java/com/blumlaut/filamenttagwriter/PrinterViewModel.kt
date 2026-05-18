@@ -285,6 +285,7 @@ class PrinterViewModel(private val database: FilamentDatabase) : ViewModel() {
         _connectionStates.value = _connectionStates.value.toMutableMap().apply {
             put(printerId, ConnectionState.Disconnected)
         }
+        // Keep cached data visible — updates in place when reconnecting
     }
 
     /**

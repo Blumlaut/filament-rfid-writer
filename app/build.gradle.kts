@@ -15,7 +15,7 @@ detekt {
 
 android {
     namespace = "com.blumlaut.filamenttagwriter"
-    compileSdk = 36
+    compileSdk = 37
     buildToolsVersion = "37.0.0"
 
     defaultConfig {

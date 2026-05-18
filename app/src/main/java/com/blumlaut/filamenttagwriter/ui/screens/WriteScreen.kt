@@ -17,10 +17,11 @@ import androidx.navigation.NavController
 import com.blumlaut.filamenttagwriter.FilamentViewModel
 import com.blumlaut.filamenttagwriter.data.model.diameterString
 import com.blumlaut.filamenttagwriter.nfc.NfcReaderWriter
+import com.blumlaut.filamenttagwriter.ui.components.FilamentCardSkeleton
 import com.blumlaut.filamenttagwriter.ui.components.NfcStatusCard
 import com.blumlaut.filamenttagwriter.ui.components.SearchBar
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun WriteScreen(
     navController: NavController,
@@ -34,6 +35,12 @@ fun WriteScreen(
     val isWriting = viewModel.isWritingTag.value
     var showSelector by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+
+    // Track initial load for skeleton in bottom sheet
+    var initialLoadDone by remember { mutableStateOf(false) }
+    LaunchedEffect(filaments) {
+        if (!initialLoadDone) initialLoadDone = true
+    }
 
     val filteredFilaments = filaments.filter { it.matchesQuery(searchQuery) }
 
@@ -113,7 +120,7 @@ fun WriteScreen(
                 NfcStatusCard(nfcAvailable = nfcAvailable, nfcEnabled = nfcEnabled)
             } else if (selectedFilament != null) {
                 if (isWriting) {
-                    CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                    LoadingIndicator(modifier = Modifier.size(48.dp))
                     Text("Writing to tag...")
                 } else if (writeResult == null) {
                     Text(
@@ -187,7 +194,18 @@ fun WriteScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                 )
 
-                if (filteredFilaments.isEmpty() && searchQuery.isNotEmpty()) {
+                if (!initialLoadDone) {
+                    // M3 Expressive: skeleton loaders during initial load
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(3) { index ->
+                            FilamentCardSkeleton(staggerIndex = index)
+                        }
+                    }
+                } else if (filteredFilaments.isEmpty() && searchQuery.isNotEmpty()) {
                     Text(
                         text = "No filaments match",
                         modifier = Modifier.padding(16.dp),

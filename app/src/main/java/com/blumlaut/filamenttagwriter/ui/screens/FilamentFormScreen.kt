@@ -6,16 +6,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.blumlaut.filamenttagwriter.FilamentViewModel
-import com.blumlaut.filamenttagwriter.data.model.Epc256Encoder
 import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.Materials
 import com.blumlaut.filamenttagwriter.data.model.NameParser
@@ -35,7 +31,6 @@ import com.blumlaut.filamenttagwriter.ui.components.parseHexColor
 import com.blumlaut.filamenttagwriter.ui.components.toArgbColor
 import java.util.Locale
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanLoader
-import com.blumlaut.filamenttagwriter.data.model.SpoolmanMaterialMapper
 
 private val DIAMETERS = listOf(1.75f, 2.85f, 3.0f)
 
@@ -54,7 +49,7 @@ private val PRESET_COLORS = listOf(
     "Gray" to 0x808080,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun FilamentFormScreen(
     navController: NavController,
@@ -75,7 +70,7 @@ fun FilamentFormScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showSearchResults by remember { mutableStateOf(false) }
     var searchResults by remember { mutableStateOf<List<com.blumlaut.filamenttagwriter.data.model.SpoolmanFilament>>(emptyList()) }
-    var showSpoolmanBanner by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     // Track which fields were explicitly set by the user (not autofilled)
     var materialExplicit by remember { mutableStateOf(editFilament != null) }
@@ -158,9 +153,9 @@ fun FilamentFormScreen(
         subtypeExplicit = true
         colorExplicit = true
         tempExplicit = true
-        showSpoolmanBanner = true
         showSearchResults = false
         searchQuery = ""
+        keyboardController?.hide()
     }
 
     Scaffold(
@@ -193,147 +188,116 @@ fun FilamentFormScreen(
             )
         },
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(padding),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Autofill banner
             if (showAutofillBanner) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                    shape = MaterialTheme.shapes.extraLarge,
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                        shape = MaterialTheme.shapes.extraLarge,
                     ) {
-                        Text(
-                            text = "Auto-filled material & color from name",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                        TextButton(onClick = { showAutofillBanner = false }) {
-                            Text("Dismiss")
-                        }
-                    }
-                }
-            }
-
-            // SpoolmanDB autofill banner
-            if (showSpoolmanBanner) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-                    shape = MaterialTheme.shapes.extraLarge,
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Text(
-                                text = "Filled from SpoolmanDB catalog",
+                                text = "Auto-filled material & color from name",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
-                            val mapping = SpoolmanMaterialMapper.mapToElegoo(
-                                filament.material
-                            )
-                            if (mapping == null) {
-                                Text(
-                                    text = "Material has no ELEGOO equivalent — check material/subtype",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
+                            TextButton(onClick = { showAutofillBanner = false }) {
+                                Text("Dismiss")
                             }
-                        }
-                        TextButton(onClick = { showSpoolmanBanner = false }) {
-                            Text("Dismiss")
                         }
                     }
                 }
             }
 
             // SpoolmanDB search bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { onSearchQueryChange(it) },
-                label = { Text("Search filament catalog") },
-                placeholder = { Text("e.g. Prusament PLA Silk Red") },
-                shape = MaterialTheme.shapes.extraLarge,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                trailingIcon = {
-                    IconButton(onClick = { onSearchQueryChange(searchQuery) }) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "Search",
-                        )
-                    }
-                },
-                supportingText = {
-                    if (SpoolmanLoader.isLoaded()) {
-                        Text("${SpoolmanLoader.count()} filaments available")
-                    } else {
-                        SpoolmanLoader.getError()?.let { err ->
-                            Text("Database unavailable: $err", color = MaterialTheme.colorScheme.error)
-                        } ?: run {
-                            Text("Loading...")
+            item {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { onSearchQueryChange(it) },
+                    label = { Text("Search filament catalog") },
+                    placeholder = { Text("e.g. Prusament PLA Silk Red") },
+                    shape = MaterialTheme.shapes.extraLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    trailingIcon = {
+                        IconButton(onClick = { onSearchQueryChange(searchQuery) }) {
+                            Icon(
+                                imageVector = Icons.Filled.Search,
+                                contentDescription = "Search",
+                            )
                         }
-                    }
-                },
-            )
+                    },
+                    supportingText = {
+                        if (SpoolmanLoader.isLoaded()) {
+                            Text("${SpoolmanLoader.count()} filaments available")
+                        } else {
+                            SpoolmanLoader.getError()?.let { err ->
+                                Text("Database unavailable: $err", color = MaterialTheme.colorScheme.error)
+                            } ?: run {
+                                Text("Loading...")
+                            }
+                        }
+                    },
+                )
+            }
 
             // Search results dropdown
             if (showSearchResults && searchResults.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 300.dp),
-                        contentPadding = PaddingValues(4.dp),
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        items(searchResults, key = { it.id }) { entry ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { applySpoolmanFilament(entry) }
-                                    .padding(8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "${entry.manufacturer} ${entry.name}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                    )
-                                    Text(
-                                        text = entry.material,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                // Color swatch
-                                entry.colorHex?.let { hex ->
-                                    hex.parseHexColor().let { rgb ->
-                                        ColorSwatch(
-                                            rgb = rgb,
-                                            size = 24.dp,
-                                            borderColor = MaterialTheme.colorScheme.outline,
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 300.dp),
+                            contentPadding = PaddingValues(4.dp),
+                        ) {
+                            items(searchResults, key = { it.id }) { entry ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { applySpoolmanFilament(entry) }
+                                        .padding(8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "${entry.manufacturer} ${entry.name}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
                                         )
+                                        Text(
+                                            text = entry.material,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    // Color swatch
+                                    entry.colorHex?.let { hex ->
+                                        hex.parseHexColor().let { rgb ->
+                                            ColorSwatch(
+                                                rgb = rgb,
+                                                size = 24.dp,
+                                                borderColor = MaterialTheme.colorScheme.outline,
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -342,138 +306,196 @@ fun FilamentFormScreen(
                 }
             }
 
-            // Name
-            OutlinedTextField(
-                value = filament.name,
-                onValueChange = { newName ->
-                    filament = filament.copy(name = newName)
-                    autofillFromName(newName)
-                },
-                label = { Text("Name") },
-                placeholder = { Text("e.g. ELEGOO PLA-CF Red") },
-                shape = MaterialTheme.shapes.extraLarge,
-                modifier = Modifier.fillMaxWidth(),
-                isError = nameError,
-                supportingText = {
-                    if (nameError) Text("Name is required")
-                    else Text("Try \"TPU Black\" or \"PLA-CF Red\" for auto-fill")
-                },
-                singleLine = true,
-            )
+            // --- Section: Basic Info ---
+            item {
+                // M3 Expressive: Contain content — surface container with emphasized header
+                Surface(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = "Basic Info",
+                            style = MaterialTheme.typography.titleSmallEmphasized,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
 
-            // Material
-            GenericDropdown(
-                label = "Material",
-                selectedValue = filament.material,
-                displayValue = { it },
-                options = Materials.getAllMaterials(),
-                onSelected = { newMaterial ->
-                    materialExplicit = true
-                    // Reset subtype to default for new material family
-                    val defaultSubtypeCode = Materials.SUBTYPE_CODES_REVERSE[newMaterial] ?: 0x0000
-                    val (minTemp, maxTemp) = if (!tempExplicit) {
-                        Materials.getDefaultTemps(newMaterial)
-                    } else {
-                        filament.run { minTemp to maxTemp }
+                        // Name
+                        OutlinedTextField(
+                            value = filament.name,
+                            onValueChange = { newName ->
+                                filament = filament.copy(name = newName)
+                                autofillFromName(newName)
+                            },
+                            label = { Text("Name") },
+                            placeholder = { Text("e.g. ELEGOO PLA-CF Red") },
+                            shape = MaterialTheme.shapes.extraLarge,
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = nameError,
+                            supportingText = {
+                                if (nameError) Text("Name is required")
+                                else Text("Try \"TPU Black\" or \"PLA-CF Red\" for auto-fill")
+                            },
+                            singleLine = true,
+                        )
+
+                        // Material
+                        GenericDropdown(
+                            label = "Material",
+                            selectedValue = filament.material,
+                            displayValue = { it },
+                            options = Materials.getAllMaterials(),
+                            onSelected = { newMaterial ->
+                                materialExplicit = true
+                                val defaultSubtypeCode = Materials.SUBTYPE_CODES_REVERSE[newMaterial] ?: 0x0000
+                                val (minTemp, maxTemp) = if (!tempExplicit) {
+                                    Materials.getDefaultTemps(newMaterial)
+                                } else {
+                                    filament.run { minTemp to maxTemp }
+                                }
+                                filament = filament.copy(
+                                    material = newMaterial,
+                                    subtypeCode = defaultSubtypeCode,
+                                    subtype = newMaterial,
+                                    minTemp = minTemp,
+                                    maxTemp = maxTemp,
+                                )
+                            },
+                            expanded = showMaterialDropdown,
+                            onExpandedChange = { showMaterialDropdown = it },
+                        )
+
+                        // Subtype
+                        if (subtypeOptions.isNotEmpty()) {
+                            GenericDropdown(
+                                label = "Subtype",
+                                selectedValue = filament.subtype,
+                                displayValue = { it },
+                                options = subtypeOptions,
+                                onSelected = { newSubtype ->
+                                    subtypeExplicit = true
+                                    val code = Materials.SUBTYPE_CODES_REVERSE[newSubtype] ?: filament.subtypeCode
+                                    filament = filament.copy(subtypeCode = code, subtype = newSubtype)
+                                },
+                                expanded = showSubtypeDropdown,
+                                onExpandedChange = { showSubtypeDropdown = it },
+                            )
+                        }
+
+                        // Color
+                        ColorPickerField(
+                            filament = filament,
+                            onFilamentChanged = {
+                                colorExplicit = true
+                                filament = it
+                            },
+                            expanded = showColorPicker,
+                            onExpandedChange = { showColorPicker = it },
+                        )
                     }
-                    filament = filament.copy(
-                        material = newMaterial,
-                        subtypeCode = defaultSubtypeCode,
-                        subtype = newMaterial,
-                        minTemp = minTemp,
-                        maxTemp = maxTemp,
-                    )
-                },
-                expanded = showMaterialDropdown,
-                onExpandedChange = { showMaterialDropdown = it },
-            )
-
-            // Subtype (dropdown based on material family)
-            if (subtypeOptions.isNotEmpty()) {
-                GenericDropdown(
-                    label = "Subtype",
-                    selectedValue = filament.subtype,
-                    displayValue = { it },
-                    options = subtypeOptions,
-                    onSelected = { newSubtype ->
-                        subtypeExplicit = true
-                        val code = Materials.SUBTYPE_CODES_REVERSE[newSubtype] ?: filament.subtypeCode
-                        filament = filament.copy(subtypeCode = code, subtype = newSubtype)
-                    },
-                    expanded = showSubtypeDropdown,
-                    onExpandedChange = { showSubtypeDropdown = it },
-                )
+                }
             }
 
-            // Color
-            ColorPickerField(
-                filament = filament,
-                onFilamentChanged = {
-                    colorExplicit = true
-                    filament = it
-                },
-                expanded = showColorPicker,
-                onExpandedChange = { showColorPicker = it },
-            )
+            // --- Section: Physical ---
+            item {
+                Surface(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = "Physical",
+                            style = MaterialTheme.typography.titleSmallEmphasized,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
 
-            // Diameter
-            GenericDropdown(
-                label = "Diameter",
-                selectedValue = filament.diameter,
-                displayValue = { "${"%.2f".format(it)}mm" },
-                options = DIAMETERS,
-                onSelected = { filament = filament.copy(diameter = it) },
-                expanded = showDiameterDropdown,
-                onExpandedChange = { showDiameterDropdown = it },
-            )
+                        // Diameter
+                        GenericDropdown(
+                            label = "Diameter",
+                            selectedValue = filament.diameter,
+                            displayValue = { "${"%.2f".format(it)}mm" },
+                            options = DIAMETERS,
+                            onSelected = { filament = filament.copy(diameter = it) },
+                            expanded = showDiameterDropdown,
+                            onExpandedChange = { showDiameterDropdown = it },
+                        )
 
-            // Weight
-            OutlinedTextField(
-                value = filament.weight.toString(),
-                onValueChange = {
-                    it.toIntOrNull()?.let { w ->
-                        filament = filament.copy(weight = w.coerceIn(0, 65535))
+                        // Weight
+                        OutlinedTextField(
+                            value = filament.weight.toString(),
+                            onValueChange = {
+                                it.toIntOrNull()?.let { w ->
+                                    filament = filament.copy(weight = w.coerceIn(0, 65535))
+                                }
+                            },
+                            label = { Text("Weight (g)") },
+                            placeholder = { Text("1000") },
+                            shape = MaterialTheme.shapes.extraLarge,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
                     }
-                },
-                label = { Text("Weight (g)") },
-                placeholder = { Text("1000") },
-                shape = MaterialTheme.shapes.extraLarge,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-
-            // Temperature Range
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = filament.minTemp.toString(),
-                    onValueChange = {
-                        tempExplicit = true
-                        it.toIntOrNull()?.let { t ->
-                            filament = filament.copy(minTemp = t.coerceIn(0, 300).toShort())
-                        }
-                    },
-                    label = { Text("Min Temp (°C)") },
-                    placeholder = { Text("190") },
-                    shape = MaterialTheme.shapes.extraLarge,
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                )
-                OutlinedTextField(
-                    value = filament.maxTemp.toString(),
-                    onValueChange = {
-                        tempExplicit = true
-                        it.toIntOrNull()?.let { t ->
-                            filament = filament.copy(maxTemp = t.coerceIn(0, 300).toShort())
-                        }
-                    },
-                    label = { Text("Max Temp (°C)") },
-                    placeholder = { Text("230") },
-                    shape = MaterialTheme.shapes.extraLarge,
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                )
+                }
             }
 
+            // --- Section: Temperature ---
+            item {
+                Surface(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = "Temperature",
+                            style = MaterialTheme.typography.titleSmallEmphasized,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = filament.minTemp.toString(),
+                                onValueChange = {
+                                    tempExplicit = true
+                                    it.toIntOrNull()?.let { t ->
+                                        filament = filament.copy(minTemp = t.coerceIn(0, 300).toShort())
+                                    }
+                                },
+                                label = { Text("Min (°C)") },
+                                placeholder = { Text("190") },
+                                shape = MaterialTheme.shapes.extraLarge,
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                            )
+                            OutlinedTextField(
+                                value = filament.maxTemp.toString(),
+                                onValueChange = {
+                                    tempExplicit = true
+                                    it.toIntOrNull()?.let { t ->
+                                        filament = filament.copy(maxTemp = t.coerceIn(0, 300).toShort())
+                                    }
+                                },
+                                label = { Text("Max (°C)") },
+                                placeholder = { Text("230") },
+                                shape = MaterialTheme.shapes.extraLarge,
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

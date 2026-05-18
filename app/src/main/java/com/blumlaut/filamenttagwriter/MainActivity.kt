@@ -21,9 +21,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -86,29 +83,21 @@ class MainActivity : ComponentActivity() {
             FilamentTagWriterTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
+                    val currentBackStackEntry = navController.currentBackStackEntryAsState()
+                    val currentRoute = currentBackStackEntry.value?.destination?.route
 
-                    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-                    var showBottomBar by remember { mutableStateOf(true) }
-
-                    // Hide bottom bar when on form screens
-                    if (currentRoute?.startsWith("form/") == true) {
-                        showBottomBar = false
-                    } else {
-                        showBottomBar = true
-                        // Sync ViewModel tab state
-                        currentRoute?.let { viewModel.setCurrentTab(it) }
-                    }
+                    // Determine if bottom bar should be shown
+                    val showBottomBar = currentRoute in BOTTOM_NAV_ITEMS.map { it.route }
 
                     Scaffold(
                         bottomBar = {
                             if (showBottomBar) {
                                 NavigationBar {
                                     BOTTOM_NAV_ITEMS.forEach { item ->
-                                        val isSelected = currentRoute == item.route
                                         NavigationBarItem(
                                             icon = { Icon(item.icon, contentDescription = item.label) },
                                             label = { Text(item.label) },
-                                            selected = isSelected,
+                                            selected = currentRoute == item.route,
                                             onClick = {
                                                 navController.navigate(item.route) {
                                                     popUpTo(navController.graph.findStartDestination().id) {

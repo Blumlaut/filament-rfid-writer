@@ -28,6 +28,7 @@ import com.blumlaut.filamenttagwriter.FilamentViewModel
 import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.diameterString
 import com.blumlaut.filamenttagwriter.ui.components.ColorSwatch
+import com.blumlaut.filamenttagwriter.ui.components.FilamentCardSkeleton
 import com.blumlaut.filamenttagwriter.ui.components.SearchBar
 
 /** Check if a filament matches a search query (name, material, subtype, color). */
@@ -41,7 +42,7 @@ fun Filament.matchesQuery(query: String): Boolean {
         (color.removePrefix("#")).lowercase().contains(q)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CatalogScreen(
     navController: NavController,
@@ -51,6 +52,12 @@ fun CatalogScreen(
     var searchQuery by remember { mutableStateOf("") }
     var deleteCandidate by remember { mutableStateOf<Filament?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // Track initial load for skeleton
+    var initialLoadDone by remember { mutableStateOf(false) }
+    LaunchedEffect(filaments) {
+        if (!initialLoadDone) initialLoadDone = true
+    }
 
     val filteredFilaments = filaments.filter { it.matchesQuery(searchQuery) }
 
@@ -68,7 +75,18 @@ fun CatalogScreen(
             }
         },
     ) { padding ->
-        if (filaments.isEmpty()) {
+        if (!initialLoadDone) {
+            // M3 Expressive: skeleton loaders during initial load
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(5) { index ->
+                    FilamentCardSkeleton(staggerIndex = index)
+                }
+            }
+        } else if (filaments.isEmpty()) {
             Column(
                 modifier = Modifier.padding(padding).fillMaxSize().padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -246,10 +264,11 @@ fun FilamentCard(
 
 @Composable
 private fun DetailChip(text: String) {
-    // M3 Expressive: extraSmall shape (4dp) + labelSmall for compact chips
+    // M3 Expressive: extraSmall shape (4dp) + surface container color (no tonalElevation)
     Surface(
         shape = MaterialTheme.shapes.extraSmall,
-        tonalElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         Text(
             text = text,
