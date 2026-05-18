@@ -105,7 +105,7 @@ class PrinterViewModel(private val database: FilamentDatabase) : ViewModel() {
     }
 
     /** Poll interval in seconds. */
-    private val POLL_INTERVAL_SECONDS = 5L
+    private val pollIntervalSeconds = 5L
 
     /**
      * Validate an IP address by attempting a WebSocket connection.
@@ -251,7 +251,7 @@ class PrinterViewModel(private val database: FilamentDatabase) : ViewModel() {
         // Start polling job
         val job = viewModelScope.launch(Dispatchers.IO) {
             while (isActive) {
-                delay(POLL_INTERVAL_SECONDS * 1000)
+                delay(pollIntervalSeconds * 1000)
                 // Printer closes socket after each response, so always reconnect+poll
                 if (ws.connectionState != ConnectionState.Connected) {
                     Log.d(TAG, "Polling: reconnecting printer ${printer.id}")

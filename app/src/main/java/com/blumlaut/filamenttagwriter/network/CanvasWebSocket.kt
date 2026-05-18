@@ -357,7 +357,6 @@ class CanvasWebSocket(private val printerIp: String, private val port: Int = 303
         if (readFully(header) != 2) return null
 
         val opcode = header[0].toInt() and 0x0F
-        val fin = (header[0].toInt() and 0x80) != 0
         val masked = (header[1].toInt() and 0x80) != 0
         var payloadLength = header[1].toInt() and 0x7F
 

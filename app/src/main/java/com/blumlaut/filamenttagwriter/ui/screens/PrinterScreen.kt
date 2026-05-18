@@ -129,7 +129,7 @@ fun PrinterScreen(
                         connectionState = connectionStates[printer.id],
                         materialData = materialData[printer.id],
                         printerStatus = printerStatus[printer.id],
-                        printerAttributes = printerAttributes[printer.id],
+                        _printerAttributes = printerAttributes[printer.id],
                         isImporting = importingPrinterId == printer.id,
                         isTrayInCatalog = { tray -> viewModel.isTrayInCatalog(tray) },
                         allCatalogued = viewModel.allTraysInCatalog(printer.id),
@@ -188,7 +188,7 @@ private fun PrinterCard(
     connectionState: ConnectionState?,
     materialData: com.blumlaut.filamenttagwriter.data.model.CanvasMaterialData?,
     printerStatus: com.blumlaut.filamenttagwriter.data.model.PrinterStatus?,
-    printerAttributes: com.blumlaut.filamenttagwriter.data.model.PrinterAttributes?,
+    _printerAttributes: com.blumlaut.filamenttagwriter.data.model.PrinterAttributes?, // unused, reserved for future use
     isImporting: Boolean,
     isTrayInCatalog: (CanvasTray) -> Boolean,
     allCatalogued: Boolean,
@@ -331,15 +331,6 @@ private fun PrinterStatusOverview(
         PrintState.Done -> MaterialTheme.colorScheme.secondary
         PrintState.Error -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    // State icon
-    val stateIcon = when (printState) {
-        PrintState.Printing -> Icons.Filled.PlayArrow
-        PrintState.Paused, PrintState.PausedAlt -> Icons.Filled.Pause
-        PrintState.Done -> Icons.Filled.CheckCircle
-        PrintState.Error -> Icons.Filled.Error
-        else -> Icons.Filled.Circle
     }
 
     // State label
@@ -592,16 +583,28 @@ private fun Grid2x2TrayDisplay(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f),
         ) {
-            slots.getOrNull(0)?.let { TraySlot(tray = it, isActive = it.trayId == activeTrayId, isInCatalog = isTrayInCatalog(it), onImport = onImportTray) }
-            slots.getOrNull(1)?.let { TraySlot(tray = it, isActive = it.trayId == activeTrayId, isInCatalog = isTrayInCatalog(it), onImport = onImportTray) }
+            slots.getOrNull(0)?.let {
+                TraySlot(tray = it, isActive = it.trayId == activeTrayId,
+                    isInCatalog = isTrayInCatalog(it), onImport = onImportTray)
+            }
+            slots.getOrNull(1)?.let {
+                TraySlot(tray = it, isActive = it.trayId == activeTrayId,
+                    isInCatalog = isTrayInCatalog(it), onImport = onImportTray)
+            }
         }
         // Right column (slots 4, 3)
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f),
         ) {
-            slots.getOrNull(3)?.let { TraySlot(tray = it, isActive = it.trayId == activeTrayId, isInCatalog = isTrayInCatalog(it), onImport = onImportTray) }
-            slots.getOrNull(2)?.let { TraySlot(tray = it, isActive = it.trayId == activeTrayId, isInCatalog = isTrayInCatalog(it), onImport = onImportTray) }
+            slots.getOrNull(3)?.let {
+                TraySlot(tray = it, isActive = it.trayId == activeTrayId,
+                    isInCatalog = isTrayInCatalog(it), onImport = onImportTray)
+            }
+            slots.getOrNull(2)?.let {
+                TraySlot(tray = it, isActive = it.trayId == activeTrayId,
+                    isInCatalog = isTrayInCatalog(it), onImport = onImportTray)
+            }
         }
     }
 }
@@ -860,8 +863,18 @@ fun AddPrinterDialog(
                     leadingIcon = {
                         when {
                             isValidating -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            isValid -> Icon(Icons.Filled.CheckCircle, contentDescription = "Valid", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            isInvalid -> Icon(Icons.Filled.Cancel, contentDescription = "Invalid", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                            isValid -> Icon(
+                                Icons.Filled.CheckCircle,
+                                contentDescription = "Valid",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            isInvalid -> Icon(
+                                Icons.Filled.Cancel,
+                                contentDescription = "Invalid",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(18.dp),
+                            )
                             else -> Icon(Icons.Filled.Wifi, contentDescription = null, modifier = Modifier.size(18.dp))
                         }
                     },

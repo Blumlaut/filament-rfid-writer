@@ -51,7 +51,11 @@ fun WriteScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "No filaments in catalog", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Text(
+                            text = "No filaments in catalog",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(text = "Add a filament profile first.", color = MaterialTheme.colorScheme.onSecondaryContainer)
                         Spacer(modifier = Modifier.height(12.dp))
@@ -90,7 +94,9 @@ fun WriteScreen(
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                             Text(
-                                text = "${filament.subtype} | ${"%.2f".format(filament.diameter)}mm | ${filament.weight}g | ${filament.color} | ${filament.minTemp}–${filament.maxTemp}°C",
+                                text = "${filament.subtype} | ${"%.2f".format(filament.diameter)}mm | " +
+                                    "${filament.weight}g | ${filament.color} | " +
+                                    "${filament.minTemp}–${filament.maxTemp}°C",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
@@ -106,7 +112,11 @@ fun WriteScreen(
                     shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(text = "NFC hardware not available on this device.", modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onErrorContainer)
+                    Text(
+                        text = "NFC hardware not available on this device.",
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
                 }
             } else if (!nfcEnabled) {
                 Card(
@@ -138,8 +148,15 @@ fun WriteScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(text = "Write Successful!", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                            Text(text = "The filament data has been written to the tag.", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text(
+                                text = "Write Successful!",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                            Text(
+                                text = "The filament data has been written to the tag.",
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
                         }
                     }
                     OutlinedButton(
@@ -158,7 +175,10 @@ fun WriteScreen(
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(text = "Write Failed", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = (writeResult as NfcReaderWriter.WriteResult.Error).message, color = MaterialTheme.colorScheme.onErrorContainer)
+                            Text(
+                                text = (writeResult as NfcReaderWriter.WriteResult.Error).message,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                            )
                         }
                     }
                     OutlinedButton(onClick = { viewModel.clearNfcWriteResult() }, modifier = Modifier.fillMaxWidth()) { Text("Try Again") }

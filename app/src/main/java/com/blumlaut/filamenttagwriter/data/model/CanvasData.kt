@@ -56,7 +56,6 @@ data class CanvasTray(
      */
     fun toFilament(): Filament {
         val material = filamentType.uppercase()
-        val temps = Materials.getDefaultTemps(material)
         val colorRgb = parseColorToInt(filamentColor)
 
         return Filament(

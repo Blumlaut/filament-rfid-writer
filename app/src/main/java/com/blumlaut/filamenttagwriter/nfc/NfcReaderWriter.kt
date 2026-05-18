@@ -5,6 +5,7 @@ import android.nfc.tech.MifareUltralight
 import android.util.Log
 import com.blumlaut.filamenttagwriter.data.model.Epc256Encoder
 import com.blumlaut.filamenttagwriter.data.model.Filament
+import java.util.Locale
 
 /**
  * Handles reading from and writing to NTAG213 RFID tags.
@@ -48,7 +49,7 @@ object NfcReaderWriter {
      * before Android's NFC service drops the RF link.
      */
     fun readFilament(tag: Tag): ReadResult {
-        val tagId = tag.id.joinToString(" ") { String.format("%02X", it) }
+        val tagId = tag.id.joinToString(" ") { String.format(Locale.US, "%02X", it) }
         Log.d(TAG, "readFilament started, tag ID: $tagId")
         Log.d(TAG, "tech list: ${tag.techList.joinToString(", ")}")
 
@@ -72,13 +73,14 @@ object NfcReaderWriter {
             if (pages.isNotEmpty()) {
                 val rawBytes = pages.entries.sortedBy { it.key }
                     .flatMap { it.value.toList() }
-                    .map { String.format("%02X", it) }
+                    .map { String.format(Locale.US, "%02X", it) }
                     .joinToString(" ")
                 Log.d(TAG, "Raw filament data: $rawBytes")
 
                 try {
                     val filament = Epc256Encoder.decodeNtagBlocks(pages)
-                    Log.d(TAG, "Decoded: ${filament.material} / ${filament.subtype} / ${filament.color} / ${filament.diameter}mm / ${filament.weight}g")
+                    Log.d(TAG, "Decoded: ${filament.material} / ${filament.subtype} / " +
+                        "${filament.color} / ${filament.diameter}mm / ${filament.weight}g")
                     ReadResult.Success(filament)
                 } catch (e: Exception) {
                     Log.w(TAG, "Decode failed: ${e.javaClass.simpleName}: ${e.message}")
@@ -107,7 +109,7 @@ object NfcReaderWriter {
      * Tries without authentication first, falls back to NTAG213 password auth.
      */
     fun writeFilament(tag: Tag, filament: Filament): WriteResult {
-        val tagId = tag.id.joinToString(" ") { String.format("%02X", it) }
+        val tagId = tag.id.joinToString(" ") { String.format(Locale.US, "%02X", it) }
         Log.d(TAG, "writeFilament started, tag ID: $tagId")
 
         val ml = MifareUltralight.get(tag)
@@ -162,7 +164,7 @@ object NfcReaderWriter {
     /** Get a human-readable tag info string. */
     fun getTagInfo(tag: Tag): String {
         val techList = tag.techList.joinToString(", ")
-        val id = tag.id.joinToString("") { String.format("%02X", it) }
+        val id = tag.id.joinToString("") { String.format(Locale.US, "%02X", it) }
         return "Tag ID: $id\nTech: $techList"
     }
 
@@ -183,10 +185,10 @@ object NfcReaderWriter {
             if (response != null && response.size >= 4) {
                 val block = response.copyOfRange(0, 4)
                 pages[page] = block
-                val hex = block.joinToString(" ") { String.format("%02X", it) }
-                Log.d(TAG, "Page $page (0x${String.format("%02X", page)}): [$hex]")
+                val hex = block.joinToString(" ") { String.format(Locale.US, "%02X", it) }
+                Log.d(TAG, "Page $page (0x${String.format(Locale.US, "%02X", page)}): [$hex]")
             } else {
-                Log.w(TAG, "Page $page (0x${String.format("%02X", page)}): null or too short (${response?.size ?: 0} bytes)")
+                Log.w(TAG, "Page $page (0x${String.format(Locale.US, "%02X", page)}): null or too short (${response?.size ?: 0} bytes)")
             }
         }
         return pages
@@ -208,8 +210,8 @@ object NfcReaderWriter {
             val blocks = Epc256Encoder.encodeNtagBlocks(filament)
             Log.d(TAG, "Writing ${blocks.size} blocks to tag")
             for ((page, block) in blocks) {
-                val hex = block.joinToString(" ") { String.format("%02X", it) }
-                Log.d(TAG, "Writing page $page (0x${String.format("%02X", page)}): [$hex]")
+                val hex = block.joinToString(" ") { String.format(Locale.US, "%02X", it) }
+                Log.d(TAG, "Writing page $page (0x${String.format(Locale.US, "%02X", page)}): [$hex]")
                 ml.writePage(page, block)
                 Log.d(TAG, "  Page $page written OK")
                 Thread.sleep(10)
@@ -234,14 +236,14 @@ object NfcReaderWriter {
             val authCommand1 = ByteArray(5)
             authCommand1[0] = 0x1B.toByte()
             System.arraycopy(password, 0, authCommand1, 1, 4)
-            Log.d(TAG, "Auth step 1: sending ${authCommand1.joinToString(" ") { String.format("%02X", it) }}")
+            Log.d(TAG, "Auth step 1: sending ${authCommand1.joinToString(" ") { String.format(Locale.US, "%02X", it) }}")
             val response = ml.transceive(authCommand1)
 
             if (response == null) {
                 Log.w(TAG, "Auth step 1: no response")
                 return false
             }
-            Log.d(TAG, "Auth step 1: response ${response.joinToString(" ") { String.format("%02X", it) }}")
+            Log.d(TAG, "Auth step 1: response ${response.joinToString(" ") { String.format(Locale.US, "%02X", it) }}")
 
             if (response.size < 4) {
                 Log.w(TAG, "Auth step 1: response too short (${response.size} bytes)")
@@ -252,9 +254,10 @@ object NfcReaderWriter {
             val authCommand2 = ByteArray(5)
             authCommand2[0] = 0x1B.toByte()
             System.arraycopy(response, 0, authCommand2, 1, 4)
-            Log.d(TAG, "Auth step 2: sending ${authCommand2.joinToString(" ") { String.format("%02X", it) }}")
+            Log.d(TAG, "Auth step 2: sending ${authCommand2.joinToString(" ") { String.format(Locale.US, "%02X", it) }}")
             val response2 = ml.transceive(authCommand2)
-            Log.d(TAG, "Auth step 2: response ${response2?.let { it.joinToString(" ") { String.format("%02X", it) } } ?: "null"}")
+            val responseHex = response2?.joinToString(" ") { String.format(Locale.US, "%02X", it) } ?: "null"
+            Log.d(TAG, "Auth step 2: response $responseHex")
 
             true
         } catch (e: Exception) {

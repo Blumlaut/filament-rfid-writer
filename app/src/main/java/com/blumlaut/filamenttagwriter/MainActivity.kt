@@ -31,7 +31,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.blumlaut.filamenttagwriter.nfc.NfcManager
-import com.blumlaut.filamenttagwriter.ui.screens.*
+import com.blumlaut.filamenttagwriter.ui.screens.CatalogScreen
+import com.blumlaut.filamenttagwriter.ui.screens.FilamentFormScreen
+import com.blumlaut.filamenttagwriter.ui.screens.PrinterScreen
+import com.blumlaut.filamenttagwriter.ui.screens.ReadScreen
+import com.blumlaut.filamenttagwriter.ui.screens.WriteScreen
 import com.blumlaut.filamenttagwriter.ui.theme.FilamentTagWriterTheme
 
 private data class BottomNavItem(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)

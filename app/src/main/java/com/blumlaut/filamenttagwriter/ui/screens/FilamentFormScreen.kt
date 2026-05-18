@@ -28,6 +28,7 @@ import com.blumlaut.filamenttagwriter.data.model.Epc256Encoder
 import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.Materials
 import com.blumlaut.filamenttagwriter.data.model.NameParser
+import java.util.Locale
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanLoader
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanMaterialMapper
 
@@ -121,7 +122,7 @@ fun FilamentFormScreen(
         if (parsed.color != null && !colorExplicit) {
             NameParser.resolveColor(parsed.color)?.let { rgb ->
                 filament = filament.copy(
-                    color = String.format("#%06X", rgb),
+                    color = String.format(Locale.US, "#%06X", rgb),
                     colorRgb = rgb,
                 )
                 changed = true
@@ -366,7 +367,11 @@ fun FilamentFormScreen(
                     materialExplicit = true
                     // Reset subtype to default for new material family
                     val defaultSubtypeCode = Materials.SUBTYPE_CODES_REVERSE[newMaterial] ?: 0x0000
-                    val (minTemp, maxTemp) = if (!tempExplicit) Materials.getDefaultTemps(newMaterial) else filament.run { minTemp to maxTemp }
+                    val (minTemp, maxTemp) = if (!tempExplicit) {
+                        Materials.getDefaultTemps(newMaterial)
+                    } else {
+                        filament.run { minTemp to maxTemp }
+                    }
                     filament = filament.copy(
                         material = newMaterial,
                         subtypeCode = defaultSubtypeCode,
@@ -664,13 +669,17 @@ private fun ColorPickerField(
                                         .size(40.dp)
                                         .clip(CircleShape)
                                         .background(Color(0xFF000000L or rgb.toLong()))
-                                        .border(2.dp, if (rgb == filament.colorRgb) MaterialTheme.colorScheme.primary else Color.Gray, CircleShape)
+                                        .border(
+                                            2.dp,
+                                            if (rgb == filament.colorRgb) MaterialTheme.colorScheme.primary else Color.Gray,
+                                            CircleShape,
+                                        )
                                         .clickable {
                                             onFilamentChanged(filament.copy(
-                                                color = String.format("#%06X", rgb),
+                                                color = String.format(Locale.US, "#%06X", rgb),
                                                 colorRgb = rgb,
                                             ))
-                                            hexInput = String.format("#%06X", rgb)
+                                            hexInput = String.format(Locale.US, "#%06X", rgb)
                                             onExpandedChange(false)
                                         },
                                 )

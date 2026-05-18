@@ -1,5 +1,7 @@
 package com.blumlaut.filamenttagwriter.data.model
 
+import java.util.Locale
+
 /**
  * Encodes/decodes the ELEGOO NTAG213 filament tag format.
  *
@@ -114,8 +116,8 @@ object Epc256Encoder {
      */
     fun decode(data: ByteArray): Filament {
 
-        if (data.size < FILAMENT_DATA_SIZE) {
-            throw IllegalArgumentException("Data too short: ${data.size} bytes (need $FILAMENT_DATA_SIZE)")
+        require(data.size >= FILAMENT_DATA_SIZE) {
+            "Data too short: ${data.size} bytes (need $FILAMENT_DATA_SIZE)"
         }
 
         // Helper: read unsigned byte at index
@@ -129,8 +131,8 @@ object Epc256Encoder {
 
         // 0x40: Header
         val header = u8(0)
-        if (header != (HEADER.toInt() and 0xFF)) {
-            throw IllegalArgumentException("Invalid header: 0x${header.toString(16).uppercase()}")
+        require(header == (HEADER.toInt() and 0xFF)) {
+            "Invalid header: 0x${header.toString(16).uppercase()}"
         }
 
         // 0x41-0x44: Manufacturer Code
@@ -233,7 +235,7 @@ object Epc256Encoder {
     }
 
     fun rgbToHex(rgb: Int): String {
-        return String.format("#%06X", rgb and 0xFFFFFF)
+        return String.format(Locale.US, "#%06X", rgb and 0xFFFFFF)
     }
 
     /**
