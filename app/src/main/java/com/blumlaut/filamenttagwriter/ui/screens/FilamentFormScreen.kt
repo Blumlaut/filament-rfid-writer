@@ -461,20 +461,6 @@ fun FilamentFormScreen(
                 )
             }
 
-            // Manufacturer Code
-            OutlinedTextField(
-                value = "0x${filament.manufacturerCode.toString(16).uppercase()}",
-                onValueChange = {
-                    it.removePrefix("0x").removePrefix("0X").toIntOrNull(16)?.let { code ->
-                        filament = filament.copy(manufacturerCode = code)
-                    }
-                },
-                label = { Text("Manufacturer Code") },
-                placeholder = { Text("0xEEEEEEEE") },
-                shape = MaterialTheme.shapes.extraLarge,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
         }
     }
 }
