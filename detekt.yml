@@ -1,0 +1,160 @@
+# Detekt configuration (1.23.8)
+# build upon default config + override what we need
+
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+  checkExhaustiveness: false
+
+# ---- Style rules ----
+style:
+  active: true
+
+  # NFC encoding, colors, protocol constants, UI padding — all intentional
+  MagicNumber:
+    active: false
+
+  WildcardImport:
+    active: true
+    # Allow wildcards for Compose / Room / Coroutines packages
+    excludeImports:
+      - 'java.util.*'
+      - 'androidx.compose.*'
+      - 'androidx.room.*'
+      - 'kotlinx.coroutines.*'
+
+  MaxLineLength:
+    active: true
+    maxLineLength: 160
+    excludePackageStatements: true
+    excludeImportStatements: true
+
+  MayBeConst:
+    active: true
+
+  UnusedPrivateMember:
+    active: true
+    allowedNames: ''
+
+  UnusedPrivateProperty:
+    active: true
+    allowedNames: '_|ignored|expected'
+
+  UnusedParameter:
+    active: true
+    allowedNames: 'ignored|expected'
+
+  ReturnCount:
+    active: true
+    max: 6
+    excludedFunctions:
+      - 'equals'
+    excludeReturnFromLambda: true
+
+  LoopWithTooManyJumpStatements:
+    active: true
+    maxJumpCount: 2
+
+  ForbiddenComment:
+    active: false
+
+  UseRequire:
+    active: false  # throw IllegalArgumentException is fine for encoding validation
+
+# ---- Complexity rules ----
+complexity:
+  active: true
+
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 8
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 150
+    thresholdInClasses: 60
+    thresholdInInterfaces: 20
+    thresholdInObjects: 55
+    thresholdInEnums: 15
+    ignoreOverridden: true
+
+  LongMethod:
+    active: true
+    threshold: 200  # Compose screens are naturally long
+
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 25  # Protocol parsing / UI is inherently complex
+
+  NestedBlockDepth:
+    active: true
+    threshold: 5
+
+# ---- Potential bugs ----
+potential-bugs:
+  active: true
+
+  IgnoredReturnValue:
+    active: true
+
+  NullableToStringCall:
+    active: false
+
+  ImplicitDefaultLocale:
+    active: false  # %02X hex formatting is locale-independent in practice
+
+# ---- Exceptions ----
+exceptions:
+  active: true
+
+  TooGenericExceptionCaught:
+    active: false  # NFC/network fallback catches are intentional
+
+# ---- Performance ----
+performance:
+  active: true
+
+  SpreadOperator:
+    active: true
+
+# ---- Naming ----
+naming:
+  active: true
+
+  FunctionNaming:
+    active: true
+    # Allow PascalCase for Composable functions (standard Compose convention)
+    functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    excludeClassPattern: '$^'
+
+  TopLevelPropertyNaming:
+    active: true
+    constantPattern: '[A-Z][_A-Z0-9]*'
+    propertyPattern: '[A-Za-z][_A-Za-z0-9]*'
+    privatePropertyPattern: '_?[A-Za-z][_A-Za-z0-9]*'
+
+  VariableNaming:
+    active: true
+    variablePattern: '[a-z][A-Za-z0-9]*'
+    privateVariablePattern: '(_)?[a-z][A-Za-z0-9]*'
+    excludeClassPattern: '$^'
+
+# ---- Coroutines ----
+coroutines:
+  active: true
+
+  InjectDispatcher:
+    active: true
+
+  RedundantSuspendModifier:
+    active: true
+
+  SuspendFunWithFlowReturnType:
+    active: true

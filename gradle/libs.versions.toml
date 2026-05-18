@@ -2,6 +2,7 @@
 agp = "9.1.1"
 kotlin = "2.3.20"
 ksp = "2.3.7"
+detekt = "1.23.8"
 
 coreKtx = "1.16.0"
 lifecycle = "2.9.0"
@@ -37,3 +38,4 @@ okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhtt
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version = "2.3.20" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
