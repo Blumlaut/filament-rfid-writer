@@ -15,7 +15,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.blumlaut.filamenttagwriter.FilamentViewModel
+import com.blumlaut.filamenttagwriter.data.model.diameterString
 import com.blumlaut.filamenttagwriter.nfc.NfcReaderWriter
+import com.blumlaut.filamenttagwriter.ui.components.NfcStatusCard
+import com.blumlaut.filamenttagwriter.ui.components.SearchBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,7 +97,7 @@ fun WriteScreen(
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                             Text(
-                                text = "${filament.subtype} | ${"%.2f".format(filament.diameter)}mm | " +
+                                text = "${filament.subtype} | ${filament.diameterString} | " +
                                     "${filament.weight}g | ${filament.color} | " +
                                     "${filament.minTemp}–${filament.maxTemp}°C",
                                 style = MaterialTheme.typography.bodySmall,
@@ -106,26 +109,8 @@ fun WriteScreen(
             }
 
             // NFC status / write prompt
-            if (!nfcAvailable) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = "NFC hardware not available on this device.",
-                        modifier = Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                }
-            } else if (!nfcEnabled) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(text = "Please enable NFC in device settings.", modifier = Modifier.padding(16.dp))
-                }
+            if (!nfcAvailable || !nfcEnabled) {
+                NfcStatusCard(nfcAvailable = nfcAvailable, nfcEnabled = nfcEnabled)
             } else if (selectedFilament != null) {
                 if (isWriting) {
                     CircularProgressIndicator(modifier = Modifier.size(48.dp))
@@ -176,7 +161,7 @@ fun WriteScreen(
                             Text(text = "Write Failed", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = (writeResult as NfcReaderWriter.WriteResult.Error).message,
+                                text = writeResult.message,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                             )
                         }
@@ -194,23 +179,12 @@ fun WriteScreen(
         ModalBottomSheet(onDismissRequest = { showSelector = false }) {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
                 // M3 Expressive: extraLarge pill shape for search
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search by name, material, or color") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Filled.Close, contentDescription = "Clear search")
-                            }
-                        }
-                    },
-                    shape = MaterialTheme.shapes.extraLarge,
+                SearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    singleLine = true,
                 )
 
                 if (filteredFilaments.isEmpty() && searchQuery.isNotEmpty()) {

@@ -1,5 +1,7 @@
 package com.blumlaut.filamenttagwriter.data.model
 
+import com.blumlaut.filamenttagwriter.ui.components.parseHexColor
+
 /**
  * Data models for CANVAS AMS tray data from the printer's WebSocket API.
  *
@@ -56,7 +58,7 @@ data class CanvasTray(
      */
     fun toFilament(): Filament {
         val material = filamentType.uppercase()
-        val colorRgb = parseColorToInt(filamentColor)
+        val colorRgb = filamentColor.parseHexColor()
 
         return Filament(
             name = filamentName.ifBlank { "${brand} $material" }.trim(),
@@ -71,14 +73,5 @@ data class CanvasTray(
             diameter = 1.75f,
             weight = 1000,
         )
-    }
-
-    private fun parseColorToInt(colorHex: String): Int {
-        return try {
-            val clean = colorHex.removePrefix("#")
-            clean.toInt(16)
-        } catch (_: Exception) {
-            0xFFFFFF
-        }
     }
 }

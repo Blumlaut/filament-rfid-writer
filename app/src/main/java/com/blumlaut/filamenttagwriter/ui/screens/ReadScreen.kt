@@ -1,6 +1,5 @@
 package com.blumlaut.filamenttagwriter.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,7 +22,11 @@ import androidx.compose.ui.unit.dp
 import com.blumlaut.filamenttagwriter.FilamentViewModel
 import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanLoader
+import com.blumlaut.filamenttagwriter.data.model.diameterString
 import com.blumlaut.filamenttagwriter.nfc.NfcReaderWriter
+import com.blumlaut.filamenttagwriter.ui.components.ColorSwatch
+import com.blumlaut.filamenttagwriter.ui.components.NfcStatusCard
+import com.blumlaut.filamenttagwriter.ui.components.parseHexColor
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,29 +54,8 @@ fun ReadScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (!nfcAvailable) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = "NFC hardware not available on this device.",
-                        modifier = Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                }
-            } else if (!nfcEnabled) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = "Please enable NFC in device settings.",
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
+            if (!nfcAvailable || !nfcEnabled) {
+                NfcStatusCard(nfcAvailable = nfcAvailable, nfcEnabled = nfcEnabled)
             } else {
                 if (isReading) {
                     CircularProgressIndicator(modifier = Modifier.size(48.dp))
@@ -346,13 +328,11 @@ private fun SpoolmanCandidateCard(
         ) {
             // Color swatch — M3 Expressive: CircleShape with semantic outline border
             entry.colorHex?.let { hex ->
-                hex.toIntOrNull(16)?.let { rgb ->
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF000000L or (rgb and 0xFFFFFF).toLong()))
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                hex.parseHexColor().let { rgb ->
+                    ColorSwatch(
+                        rgb = rgb,
+                        size = 32.dp,
+                        borderColor = MaterialTheme.colorScheme.outline,
                     )
                 }
             }
@@ -392,10 +372,7 @@ private fun FilamentInfoCard(filament: Filament) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Box(
-                    modifier = Modifier.size(48.dp).clip(CircleShape)
-                        .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong())),
-                )
+                ColorSwatch(rgb = filament.colorRgb, size = 48.dp)
                 Column {
                     Text(
                         text = filament.name.ifBlank { "Unknown Filament" },
@@ -414,7 +391,7 @@ private fun FilamentInfoCard(filament: Filament) {
 
             FilamentDetailRow("Material", filament.material)
             FilamentDetailRow("Subtype", filament.subtype)
-            FilamentDetailRow("Diameter", "${"%.2f".format(filament.diameter)}mm")
+            FilamentDetailRow("Diameter", filament.diameterString)
             FilamentDetailRow("Weight", "${filament.weight}g")
             FilamentDetailRow("Color", filament.color)
             FilamentDetailRow("Temp Range", "${filament.minTemp}–${filament.maxTemp}°C")

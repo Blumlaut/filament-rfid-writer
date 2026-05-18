@@ -28,6 +28,9 @@ import com.blumlaut.filamenttagwriter.data.model.CanvasTray
 import com.blumlaut.filamenttagwriter.data.model.PrintState
 import com.blumlaut.filamenttagwriter.data.model.Printer
 import com.blumlaut.filamenttagwriter.network.ConnectionState
+import com.blumlaut.filamenttagwriter.ui.components.ColorSwatch
+import com.blumlaut.filamenttagwriter.ui.components.isLightColor
+import com.blumlaut.filamenttagwriter.ui.components.parseHexColor
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -616,7 +619,7 @@ private fun TraySlot(
     isInCatalog: Boolean,
     onImport: (CanvasTray) -> Unit,
 ) {
-    val colorRgb = tray.parseColorToInt()
+    val colorRgb = tray.filamentColor.parseHexColor(0x808080)
     val trayColor = if (tray.hasFilament) {
         Color(0xFF000000L or (colorRgb and 0xFFFFFF).toLong())
     } else {
@@ -779,22 +782,7 @@ private fun TraySlot(
     }
 }
 
-private fun CanvasTray.parseColorToInt(): Int {
-    return try {
-        val clean = filamentColor.removePrefix("#")
-        clean.toInt(16)
-    } catch (_: Exception) {
-        0x808080
-    }
-}
 
-private fun isLightColor(rgb: Int): Boolean {
-    val r = (rgb shr 16) and 0xFF
-    val g = (rgb shr 8) and 0xFF
-    val b = rgb and 0xFF
-    val luminance = (0.299 * r + 0.587 * g + 0.114 * b)
-    return luminance > 128
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

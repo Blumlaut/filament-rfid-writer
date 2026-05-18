@@ -1,5 +1,8 @@
 package com.blumlaut.filamenttagwriter.data.model
 
+import com.blumlaut.filamenttagwriter.data.local.FilamentEntity
+import java.util.Calendar
+
 /**
  * Represents a filament spool with all metadata that maps to the ELEGOO NTAG213 tag format.
  *
@@ -41,3 +44,39 @@ data class Filament(
     val weight: Int = 1000,                           // grams
     val productionDateRaw: Short = 0,                 // raw 16-bit production date from tag
 )
+
+/**
+ * Human-readable diameter string (e.g. "1.75mm").
+ */
+val Filament.diameterString: String
+    get() = "${"%.2f".format(diameter)}mm"
+
+/**
+ * Convert this domain model to a Room entity.
+ */
+fun Filament.toEntity(): FilamentEntity = FilamentEntity(
+    id = id,
+    name = name,
+    manufacturerCode = manufacturerCode,
+    material = material,
+    subtypeCode = subtypeCode,
+    subtype = subtype,
+    colorRgb = colorRgb,
+    colorModifier = colorModifier,
+    minTemp = minTemp,
+    maxTemp = maxTemp,
+    diameter = diameter,
+    weight = weight,
+    productionDateRaw = productionDateRaw,
+)
+
+/**
+ * Generate a 16-bit production date raw value from the current date.
+ * Format: (year % 100) << 8 | (month 1-12)
+ */
+fun generateProductionDateRaw(): Short {
+    val cal = Calendar.getInstance()
+    val year = cal.get(Calendar.YEAR) % 100
+    val month = cal.get(Calendar.MONTH) + 1
+    return ((year shl 8) or month).toShort()
+}

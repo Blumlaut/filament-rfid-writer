@@ -28,6 +28,11 @@ import com.blumlaut.filamenttagwriter.data.model.Epc256Encoder
 import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.Materials
 import com.blumlaut.filamenttagwriter.data.model.NameParser
+import com.blumlaut.filamenttagwriter.ui.components.ColorSwatch
+import com.blumlaut.filamenttagwriter.ui.components.GenericDropdown
+import com.blumlaut.filamenttagwriter.ui.components.isLightColor
+import com.blumlaut.filamenttagwriter.ui.components.parseHexColor
+import com.blumlaut.filamenttagwriter.ui.components.toArgbColor
 import java.util.Locale
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanLoader
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanMaterialMapper
@@ -323,13 +328,11 @@ fun FilamentFormScreen(
                                 }
                                 // Color swatch
                                 entry.colorHex?.let { hex ->
-                                    hex.toIntOrNull(16)?.let { rgb ->
-                                        Box(
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0xFF000000L or (rgb and 0xFFFFFF).toLong()))
-                                                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                                    hex.parseHexColor().let { rgb ->
+                                        ColorSwatch(
+                                            rgb = rgb,
+                                            size = 24.dp,
+                                            borderColor = MaterialTheme.colorScheme.outline,
                                         )
                                     }
                                 }
@@ -359,9 +362,10 @@ fun FilamentFormScreen(
             )
 
             // Material
-            MaterialDropdown(
+            GenericDropdown(
                 label = "Material",
                 selectedValue = filament.material,
+                displayValue = { it },
                 options = Materials.getAllMaterials(),
                 onSelected = { newMaterial ->
                     materialExplicit = true
@@ -386,9 +390,10 @@ fun FilamentFormScreen(
 
             // Subtype (dropdown based on material family)
             if (subtypeOptions.isNotEmpty()) {
-                MaterialDropdown(
+                GenericDropdown(
                     label = "Subtype",
                     selectedValue = filament.subtype,
+                    displayValue = { it },
                     options = subtypeOptions,
                     onSelected = { newSubtype ->
                         subtypeExplicit = true
@@ -412,8 +417,11 @@ fun FilamentFormScreen(
             )
 
             // Diameter
-            DiameterDropdown(
-                selectedDiameter = filament.diameter,
+            GenericDropdown(
+                label = "Diameter",
+                selectedValue = filament.diameter,
+                displayValue = { "${"%.2f".format(it)}mm" },
+                options = DIAMETERS,
                 onSelected = { filament = filament.copy(diameter = it) },
                 expanded = showDiameterDropdown,
                 onExpandedChange = { showDiameterDropdown = it },
@@ -472,104 +480,6 @@ fun FilamentFormScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MaterialDropdown(
-    label: String,
-    selectedValue: String,
-    options: List<String>,
-    onSelected: (String) -> Unit,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
-) {
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = onExpandedChange,
-    ) {
-        OutlinedTextField(
-            value = selectedValue,
-            onValueChange = {},
-            label = { Text(label) },
-            shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(),
-            readOnly = true,
-            singleLine = true,
-            trailingIcon = {
-                IconButton(onClick = { onExpandedChange(!expanded) }) {
-                    Icon(
-                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                        contentDescription = "Select material",
-                    )
-                }
-            },
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { onExpandedChange(false) },
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option) },
-                    onClick = {
-                        onSelected(option)
-                        onExpandedChange(false)
-                    },
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DiameterDropdown(
-    selectedDiameter: Float,
-    onSelected: (Float) -> Unit,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
-) {
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = onExpandedChange,
-    ) {
-        OutlinedTextField(
-            value = "${"%.2f".format(selectedDiameter)}mm",
-            onValueChange = {},
-            label = { Text("Diameter") },
-            shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(),
-            readOnly = true,
-            singleLine = true,
-            trailingIcon = {
-                IconButton(onClick = { onExpandedChange(!expanded) }) {
-                    Icon(
-                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                        contentDescription = "Select diameter",
-                    )
-                }
-            },
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { onExpandedChange(false) },
-        ) {
-            DIAMETERS.forEach { diameter ->
-                DropdownMenuItem(
-                    text = { Text("${"%.2f".format(diameter)}mm") },
-                    onClick = {
-                        onSelected(diameter)
-                        onExpandedChange(false)
-                    },
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 private fun ColorPickerField(
     filament: Filament,
     onFilamentChanged: (Filament) -> Unit,
@@ -598,13 +508,11 @@ private fun ColorPickerField(
             singleLine = true,
             trailingIcon = {
                 // M3 Expressive: circular color swatch
-                Box(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
-                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                ColorSwatch(
+                    rgb = filament.colorRgb,
+                    size = 24.dp,
+                    borderColor = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(4.dp),
                 )
             },
         )
@@ -622,12 +530,11 @@ private fun ColorPickerField(
                     onValueChange = { newValue ->
                         hexInput = newValue
                         if (newValue.startsWith("#") && newValue.length == 7) {
-                            newValue.substring(1).toIntOrNull(16)?.let { rgb ->
-                                onFilamentChanged(filament.copy(
-                                    color = newValue.uppercase(),
-                                    colorRgb = rgb,
-                                ))
-                            }
+                            val rgb = newValue.parseHexColor()
+                            onFilamentChanged(filament.copy(
+                                color = newValue.uppercase(),
+                                colorRgb = rgb,
+                            ))
                         }
                     },
                     label = { Text("Hex") },
@@ -636,12 +543,10 @@ private fun ColorPickerField(
                     modifier = Modifier.weight(1f),
                 )
                 // M3 Expressive: circular color preview
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong()))
-                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                ColorSwatch(
+                    rgb = filament.colorRgb,
+                    size = 32.dp,
+                    borderColor = MaterialTheme.colorScheme.outline,
                 )
             }
 
@@ -668,7 +573,7 @@ private fun ColorPickerField(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF000000L or rgb.toLong()))
+                                        .background(rgb.toArgbColor())
                                         .border(
                                             2.dp,
                                             if (rgb == filament.colorRgb) MaterialTheme.colorScheme.primary else Color.Gray,

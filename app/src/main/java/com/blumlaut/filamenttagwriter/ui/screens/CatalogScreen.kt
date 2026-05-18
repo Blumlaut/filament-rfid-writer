@@ -1,6 +1,5 @@
 package com.blumlaut.filamenttagwriter.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +26,9 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.blumlaut.filamenttagwriter.FilamentViewModel
 import com.blumlaut.filamenttagwriter.data.model.Filament
+import com.blumlaut.filamenttagwriter.data.model.diameterString
+import com.blumlaut.filamenttagwriter.ui.components.ColorSwatch
+import com.blumlaut.filamenttagwriter.ui.components.SearchBar
 
 /** Check if a filament matches a search query (name, material, subtype, color). */
 fun Filament.matchesQuery(query: String): Boolean {
@@ -87,23 +89,12 @@ fun CatalogScreen(
         } else {
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
                 // M3 Expressive: extraLarge pill shape for search
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search by name, material, or color") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Filled.Close, contentDescription = "Clear search")
-                            }
-                        }
-                    },
-                    shape = MaterialTheme.shapes.extraLarge,
+                SearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp, vertical = 4.dp),
-                    singleLine = true,
                 )
 
                 if (filteredFilaments.isEmpty() && searchQuery.isNotEmpty()) {
@@ -198,10 +189,7 @@ fun FilamentCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 // M3 Expressive: circular color swatch
-                Box(
-                    modifier = Modifier.size(40.dp).clip(CircleShape)
-                        .background(Color(0xFF000000L or (filament.colorRgb and 0xFFFFFF).toLong())),
-                )
+                ColorSwatch(rgb = filament.colorRgb)
                 Column(modifier = Modifier.weight(1f)) {
                     // M3 Expressive: emphasized headline for selection
                     Text(
@@ -247,7 +235,7 @@ fun FilamentCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
             ) {
-                DetailChip("${"%.2f".format(filament.diameter)}mm")
+                DetailChip(filament.diameterString)
                 DetailChip("${filament.weight}g")
                 DetailChip(filament.color)
                 DetailChip("${filament.minTemp}–${filament.maxTemp}°C")

@@ -11,6 +11,8 @@ import com.blumlaut.filamenttagwriter.data.local.FilamentEntity
 import com.blumlaut.filamenttagwriter.data.model.Epc256Encoder
 import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.Materials
+import com.blumlaut.filamenttagwriter.data.model.generateProductionDateRaw
+import com.blumlaut.filamenttagwriter.data.model.toEntity
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanFilament
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanLoader
 import com.blumlaut.filamenttagwriter.data.model.SpoolmanLoader.SpoolmanMatchResult
@@ -20,7 +22,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Calendar
 import java.util.UUID
 
 /**
@@ -249,10 +250,7 @@ class FilamentViewModel(private val database: FilamentDatabase) : ViewModel() {
      * The tag encoding always uses ELEGOO codes — SpoolmanDB is reference only.
      */
     fun createFilamentFromSpoolman(entry: SpoolmanFilament): Filament {
-        val cal = Calendar.getInstance()
-        val year = cal.get(Calendar.YEAR) % 100
-        val month = cal.get(Calendar.MONTH) + 1
-        val prodRaw = ((year shl 8) or month).toShort()
+        val prodRaw = generateProductionDateRaw()
 
         // Map SpoolmanDB material to ELEGOO material + subtype
         val elegooMapping = SpoolmanMaterialMapper.mapToElegoo(entry.material)
@@ -292,10 +290,6 @@ class FilamentViewModel(private val database: FilamentDatabase) : ViewModel() {
      * Create a new empty filament with a unique ID and default values.
      */
     fun createNewFilament(): Filament {
-        val cal = Calendar.getInstance()
-        val year = cal.get(Calendar.YEAR) % 100
-        val month = cal.get(Calendar.MONTH) + 1
-        val prodRaw = ((year shl 8) or month).toShort()
         return Filament(
             id = UUID.randomUUID().toString(),
             name = "",
@@ -310,7 +304,7 @@ class FilamentViewModel(private val database: FilamentDatabase) : ViewModel() {
             maxTemp = 230,
             diameter = 1.75f,
             weight = 1000,
-            productionDateRaw = prodRaw,
+            productionDateRaw = generateProductionDateRaw(),
         )
     }
 
@@ -325,24 +319,6 @@ class FilamentViewModel(private val database: FilamentDatabase) : ViewModel() {
             subtypeCode = subtypeCode,
             subtype = subtype,
             color = Epc256Encoder.rgbToHex(colorRgb),
-            colorRgb = colorRgb,
-            colorModifier = colorModifier,
-            minTemp = minTemp,
-            maxTemp = maxTemp,
-            diameter = diameter,
-            weight = weight,
-            productionDateRaw = productionDateRaw,
-        )
-    }
-
-    private fun Filament.toEntity(): FilamentEntity {
-        return FilamentEntity(
-            id = id,
-            name = name,
-            manufacturerCode = manufacturerCode,
-            material = material,
-            subtypeCode = subtypeCode,
-            subtype = subtype,
             colorRgb = colorRgb,
             colorModifier = colorModifier,
             minTemp = minTemp,

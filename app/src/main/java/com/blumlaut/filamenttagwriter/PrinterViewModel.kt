@@ -12,6 +12,7 @@ import com.blumlaut.filamenttagwriter.data.model.CanvasMaterialData
 import com.blumlaut.filamenttagwriter.data.model.CanvasTray
 import com.blumlaut.filamenttagwriter.data.model.Filament
 import com.blumlaut.filamenttagwriter.data.model.Printer
+import com.blumlaut.filamenttagwriter.data.model.toEntity
 import com.blumlaut.filamenttagwriter.data.model.PrinterStatus
 import com.blumlaut.filamenttagwriter.data.model.PrinterAttributes
 import com.blumlaut.filamenttagwriter.network.CanvasWebSocket
@@ -310,39 +311,30 @@ class PrinterViewModel(private val database: FilamentDatabase) : ViewModel() {
     }
 
     /**
-     * Import a tray's filament data into the catalog.
+     * Import a single tray's filament data into the catalog.
      * If a filament with the same name+color already exists, skip it.
+     */
+    private suspend fun importSingleTray(tray: CanvasTray) {
+        if (!tray.hasFilament) return
+        val filament = tray.toFilament()
+        val existing = filamentDao.getAll().first().find { entity ->
+            entity.name.equals(filament.name, ignoreCase = true) &&
+            entity.colorRgb == filament.colorRgb
+        }
+        if (existing == null) {
+            val newFilament = filament.copy(id = UUID.randomUUID().toString())
+            filamentDao.insert(newFilament.toEntity())
+        }
+    }
+
+    /**
+     * Import a tray's filament data into the catalog.
      */
     fun importTrayToCatalog(printerId: String, tray: CanvasTray) {
         importingPrinterId.value = printerId
         viewModelScope.launch {
             try {
-                val filament = tray.toFilament()
-                // Check if already in catalog (by name + color match)
-                val existing = filamentDao.getAll().first().find { entity ->
-                    entity.name.equals(filament.name, ignoreCase = true) &&
-                    entity.colorRgb == filament.colorRgb
-                }
-
-                if (existing == null) {
-                    val newFilament = filament.copy(id = UUID.randomUUID().toString())
-                    val entity = FilamentEntity(
-                        id = newFilament.id,
-                        name = newFilament.name,
-                        manufacturerCode = newFilament.manufacturerCode,
-                        material = newFilament.material,
-                        subtypeCode = newFilament.subtypeCode,
-                        subtype = newFilament.subtype,
-                        colorRgb = newFilament.colorRgb,
-                        colorModifier = newFilament.colorModifier,
-                        minTemp = newFilament.minTemp,
-                        maxTemp = newFilament.maxTemp,
-                        diameter = newFilament.diameter,
-                        weight = newFilament.weight,
-                        productionDateRaw = newFilament.productionDateRaw,
-                    )
-                    filamentDao.insert(entity)
-                }
+                importSingleTray(tray)
             } finally {
                 delay(500) // Brief visual feedback
                 importingPrinterId.value = null
@@ -359,31 +351,7 @@ class PrinterViewModel(private val database: FilamentDatabase) : ViewModel() {
         viewModelScope.launch {
             try {
                 for (tray in data.allTrays) {
-                    if (!tray.hasFilament) continue
-                    val filament = tray.toFilament()
-                    val existing = filamentDao.getAll().first().find { entity ->
-                        entity.name.equals(filament.name, ignoreCase = true) &&
-                        entity.colorRgb == filament.colorRgb
-                    }
-                    if (existing == null) {
-                        val newFilament = filament.copy(id = UUID.randomUUID().toString())
-                        val entity = FilamentEntity(
-                            id = newFilament.id,
-                            name = newFilament.name,
-                            manufacturerCode = newFilament.manufacturerCode,
-                            material = newFilament.material,
-                            subtypeCode = newFilament.subtypeCode,
-                            subtype = newFilament.subtype,
-                            colorRgb = newFilament.colorRgb,
-                            colorModifier = newFilament.colorModifier,
-                            minTemp = newFilament.minTemp,
-                            maxTemp = newFilament.maxTemp,
-                            diameter = newFilament.diameter,
-                            weight = newFilament.weight,
-                            productionDateRaw = newFilament.productionDateRaw,
-                        )
-                        filamentDao.insert(entity)
-                    }
+                    importSingleTray(tray)
                 }
             } finally {
                 delay(800)
